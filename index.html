@@ -82,7 +82,7 @@
     }
     .joysticks {
       display: grid;
-      grid-template-columns: auto auto auto;
+      grid-template-columns: auto auto auto auto;
       align-items: center;
       justify-content: center;
       gap: clamp(12px, 3vw, 40px);
@@ -291,7 +291,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v9</div>
+  <div class="build-version">v10</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -307,6 +307,7 @@
       </svg>
 
       <select class="key-select" id="key-select"></select>
+      <select class="key-select wave-select" id="wave-select"></select>
 
       <svg class="joystick" id="joystick" viewBox="0 0 220 220">
         <defs>
@@ -363,7 +364,7 @@
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
 
-    osc.type = 'sine';
+    osc.type = currentWaveType;
     osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
     gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
@@ -504,6 +505,9 @@
   const KEY_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   let currentKeyRoot = 0;
 
+  const WAVE_TYPES = ['sine', 'square', 'sawtooth', 'triangle'];
+  let currentWaveType = 'sine';
+
   const degreeByKey = new Map(DEGREES.map(d => [d.key, d]));
   const degreeByBindKey = new Map(DEGREES.map(d => [d.bindKey, d]));
   const heldDegrees = new Map(); // degree key -> direction it's currently sounding under
@@ -554,6 +558,19 @@
   keySelectEl.value = currentKeyRoot;
   keySelectEl.addEventListener('change', () => {
     setKeyRoot(Number(keySelectEl.value));
+  });
+
+  // --- render the oscillator waveform selector as a dropdown ---
+  const waveSelectEl = document.getElementById('wave-select');
+  WAVE_TYPES.forEach(type => {
+    const option = document.createElement('option');
+    option.value = type;
+    option.textContent = type[0].toUpperCase() + type.slice(1);
+    waveSelectEl.appendChild(option);
+  });
+  waveSelectEl.value = currentWaveType;
+  waveSelectEl.addEventListener('change', () => {
+    currentWaveType = waveSelectEl.value;
   });
 
   // The set of voices a held degree should currently be sounding, as a
