@@ -356,7 +356,7 @@
     const el = document.createElement('button');
     el.className = 'chord-btn';
     el.dataset.key = d.key;
-    el.innerHTML = `<span class="degree">${d.degree}</span><span class="quality">${d.quality === 'diminished' ? 'dim' : d.quality}</span><span class="bind-key">${d.bindKey}</span>`;
+    el.innerHTML = `<span class="degree">${d.degree}</span><span class="quality">${d.quality === 'diminished' ? 'dim' : d.quality}</span><span class="bind-key">${d.bindKey} / ${d.key}</span>`;
     const isEven = Number(d.key) % 2 === 0;
     (isEven ? topRowEl : bottomRowEl).appendChild(el);
     d.el = el;
@@ -439,16 +439,17 @@
     d.el.addEventListener('touchcancel', (e) => { e.preventDefault(); releaseDegree(d); }, { passive: false });
   });
 
-  // physical computer-keyboard interaction: odd degrees on a-s-d-f, even on w-e-r
+  // physical computer-keyboard interaction: odd degrees on a-s-d-f, even on
+  // w-e-r, plus the number row 1-7 as an alternate binding for the same degrees
   window.addEventListener('keydown', (e) => {
     if (e.repeat) return;
-    const d = degreeByBindKey.get(e.key.toLowerCase());
+    const d = degreeByBindKey.get(e.key.toLowerCase()) || degreeByKey.get(e.key);
     if (!d) return;
     pressDegree(d);
   });
 
   window.addEventListener('keyup', (e) => {
-    const d = degreeByBindKey.get(e.key.toLowerCase());
+    const d = degreeByBindKey.get(e.key.toLowerCase()) || degreeByKey.get(e.key);
     if (!d) return;
     releaseDegree(d);
   });
