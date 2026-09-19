@@ -329,7 +329,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v16</div>
+  <div class="build-version">v17</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -391,6 +391,32 @@
   const DELAY_FEEDBACK = 0.32;
   const DELAY_SEND_LEVEL = 0.22;
 
+  // Shared reverb send, same parallel-send pattern as the delay. The impulse
+  // response is generated on the fly (decaying noise per channel) rather
+  // than loaded from an audio file, matching the no-external-assets,
+  // no-build-step nature of this project.
+  let reverbSend = null;
+  const REVERB_DECAY = 2.2; // seconds
+  const REVERB_SEND_LEVEL = 0.18;
+
+  function createReverbImpulse(ctx) {
+    const length = Math.floor(ctx.sampleRate * REVERB_DECAY);
+    const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+    // Multiplicative decay (one multiply/sample) instead of Math.pow per
+    // sample — this runs synchronously on first touch, so it needs to stay
+    // cheap enough not to add input latency on the very first note.
+    const decayPerSample = Math.pow(0.001, 1 / length); // -60dB by the end
+    for (let channel = 0; channel < impulse.numberOfChannels; channel++) {
+      const data = impulse.getChannelData(channel);
+      let envelope = 1;
+      for (let i = 0; i < length; i++) {
+        data[i] = (Math.random() * 2 - 1) * envelope;
+        envelope *= decayPerSample;
+      }
+    }
+    return impulse;
+  }
+
   function ensureContext() {
     if (!audioCtx) {
       audioCtx = new AudioCtx();
@@ -408,6 +434,15 @@
       delayNode.connect(feedbackGain);
       feedbackGain.connect(delayNode);
       delayNode.connect(audioCtx.destination);
+
+      reverbSend = audioCtx.createGain();
+      reverbSend.gain.value = REVERB_SEND_LEVEL;
+
+      const convolver = audioCtx.createConvolver();
+      convolver.buffer = createReverbImpulse(audioCtx);
+
+      reverbSend.connect(convolver);
+      convolver.connect(audioCtx.destination);
     }
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
@@ -435,6 +470,7 @@
     osc.connect(gainNode);
     gainNode.connect(audioCtx.destination);
     gainNode.connect(delaySend);
+    gainNode.connect(reverbSend);
     osc.start();
 
     voices.set(id, { osc, gainNode });
