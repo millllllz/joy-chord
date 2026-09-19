@@ -229,7 +229,7 @@
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
 
-  const ATTACK = 0.1;
+  const ATTACK = 0.0;
   const RELEASE = 0.08;
   const GAIN = 0.15;
 
@@ -471,23 +471,30 @@
     updateJoyCenterLabel();
   }
 
+  function soleHeldQuality() {
+    const heldQualities = new Set(
+      Array.from(heldDegrees.keys()).map(key => degreeByKey.get(key).quality)
+    );
+    return heldQualities.size === 1 ? [...heldQualities][0] : null;
+  }
+
   // At center, show the natural quality of whatever's currently held (so it's
-  // clear the chord "snapped back" rather than looking blank/stuck); any other
-  // direction shows that modification's label regardless of what's held.
+  // clear the chord "snapped back" rather than looking blank/stuck). 'up' is
+  // special-cased the same way, since it toggles maj/min and the actual
+  // outcome depends on what's held rather than being a fixed label. Every
+  // other direction shows its fixed modification name regardless of what's held.
   function updateJoyCenterLabel() {
+    if (currentDirection === 'up') {
+      const quality = soleHeldQuality();
+      joyCenterEl.textContent = quality ? (quality === 'major' ? 'min' : 'maj') : 'maj/min';
+      return;
+    }
     if (currentDirection !== 'center') {
       joyCenterEl.textContent = CHORD_LABELS[currentDirection] || '';
       return;
     }
-    const heldQualities = new Set(
-      Array.from(heldDegrees.keys()).map(key => degreeByKey.get(key).quality)
-    );
-    if (heldQualities.size === 1) {
-      const [quality] = heldQualities;
-      joyCenterEl.textContent = quality === 'diminished' ? 'dim' : quality;
-    } else {
-      joyCenterEl.textContent = '';
-    }
+    const quality = soleHeldQuality();
+    joyCenterEl.textContent = quality ? (quality === 'diminished' ? 'dim' : quality) : '';
   }
 
   // The 'up' wedge toggles maj/min, but the actual outcome depends on what's
@@ -496,15 +503,8 @@
   // up will actually do to whatever's currently pressed.
   const joyLabelUp = document.getElementById('joy-label-up');
   function updateUpWedgeLabel() {
-    const heldQualities = new Set(
-      Array.from(heldDegrees.keys()).map(key => degreeByKey.get(key).quality)
-    );
-    if (heldQualities.size === 1) {
-      const [quality] = heldQualities;
-      joyLabelUp.textContent = quality === 'major' ? '→ min' : '→ maj';
-    } else {
-      joyLabelUp.textContent = 'maj/min';
-    }
+    const quality = soleHeldQuality();
+    joyLabelUp.textContent = quality ? (quality === 'major' ? '→ min' : '→ maj') : 'maj/min';
   }
 
   const joyCenterCircle = document.querySelector('.joy-center');
