@@ -43,6 +43,56 @@
     color: var(--muted);
     font-size: 13px;
   }
+  .chord-selector {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin: 8px auto 0;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.06);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .chord-half {
+    position: absolute;
+    top: 0;
+    width: 50%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    background: linear-gradient(145deg, #2a2e35, #1a1c20);
+    color: var(--muted);
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+  .chord-half.major {
+    left: 0;
+    border-radius: 70px 0 0 70px;
+  }
+  .chord-half.minor {
+    right: 0;
+    border-radius: 0 70px 70px 0;
+  }
+  .chord-half.hover {
+    background: linear-gradient(145deg, var(--accent), #3fd8ac);
+    color: #0d1f19;
+  }
+  .chord-selector::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 1px;
+    height: 100%;
+    background: rgba(0,0,0,0.4);
+  }
+
   .keyboard {
     position: relative;
     display: flex;
@@ -100,6 +150,11 @@
   <div class="synth">
     <h1>Chord</h1>
     <p class="sub">press &amp; hold for tone</p>
+
+    <div class="chord-selector" id="chord-selector">
+      <div class="chord-half major" data-chord="major">Major</div>
+      <div class="chord-half minor" data-chord="minor">Minor</div>
+    </div>
 
     <div class="keyboard" id="keyboard"></div>
   </div>
@@ -177,11 +232,15 @@
     return FREQ_C4 * Math.pow(2, semitonesFromC4 / 12);
   }
 
-  // major triad: root, major third, perfect fifth
-  const MAJOR_TRIAD_INTERVALS = [0, 4, 7];
+  // triad interval sets: root, third, perfect fifth
+  const CHORD_INTERVALS = {
+    major: [0, 4, 7],
+    minor: [0, 3, 7],
+  };
+  let currentChord = 'major';
 
   const keyByChar = new Map(NOTE_MAP.map(n => [n.key, n]));
-  const heldKeys = new Set();
+  const heldKeys = new Map(); // key -> chord type used when pressed
 
   // --- render keyboard UI ---
   const keyboardEl = document.getElementById('keyboard');
@@ -215,8 +274,8 @@
 
   function pressNote(n) {
     if (heldKeys.has(n.key)) return;
-    heldKeys.add(n.key);
-    MAJOR_TRIAD_INTERVALS.forEach(interval => {
+    heldKeys.set(n.key, currentChord);
+    CHORD_INTERVALS[currentChord].forEach(interval => {
       startVoice(`${n.key}:${interval}`, noteFreq(n.semitone + interval));
     });
     n.el.classList.add('active');
@@ -224,8 +283,9 @@
 
   function releaseNote(n) {
     if (!heldKeys.has(n.key)) return;
+    const chord = heldKeys.get(n.key);
     heldKeys.delete(n.key);
-    MAJOR_TRIAD_INTERVALS.forEach(interval => {
+    CHORD_INTERVALS[chord].forEach(interval => {
       stopVoice(`${n.key}:${interval}`);
     });
     n.el.classList.remove('active');
@@ -253,6 +313,15 @@
     const n = keyByChar.get(e.key.toLowerCase());
     if (!n) return;
     releaseNote(n);
+  });
+
+  // --- chord type selector: hover major/minor half to switch chord quality ---
+  const chordHalves = document.querySelectorAll('.chord-half');
+  chordHalves.forEach(half => {
+    half.addEventListener('mouseenter', () => {
+      currentChord = half.dataset.chord;
+      chordHalves.forEach(h => h.classList.toggle('hover', h === half));
+    });
   });
 </script>
 </body>
