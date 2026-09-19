@@ -43,10 +43,15 @@
     color: var(--muted);
     font-size: 13px;
   }
+  .joysticks {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    margin: 8px 0 0;
+  }
   .joystick {
     width: 220px;
     height: 220px;
-    margin: 8px auto 0;
     user-select: none;
     -webkit-user-select: none;
   }
@@ -91,6 +96,57 @@
     pointer-events: none;
   }
 
+  /* degree joystick: 7 wedges instead of 8, plain-text degree labels
+     (I, ii, iii...) rather than uppercase modifier names */
+  .degree-wedge {
+    cursor: pointer;
+    fill: #22252a;
+    stroke: #0c0d0f;
+    stroke-width: 1;
+    transition: fill 0.1s ease;
+  }
+  .degree-wedge:hover,
+  .degree-wedge.active {
+    fill: var(--accent);
+  }
+  .degree-label {
+    font-size: 15px;
+    font-weight: 700;
+    fill: var(--muted);
+    pointer-events: none;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.1s ease;
+  }
+  .degree-wedge:hover + .degree-label,
+  .degree-label.active {
+    fill: #0d1f19;
+  }
+  .degree-quality {
+    font-size: 7px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    fill: var(--muted);
+    pointer-events: none;
+    text-anchor: middle;
+    opacity: 0.7;
+  }
+  .degree-wedge:hover + .degree-label + .degree-quality,
+  .degree-quality.active {
+    fill: #0d1f19;
+    opacity: 0.85;
+  }
+  .degree-bind-key {
+    font-size: 7px;
+    font-weight: 600;
+    fill: var(--muted);
+    opacity: 0.5;
+    pointer-events: none;
+    text-anchor: middle;
+    text-transform: lowercase;
+  }
+
   .key-selector {
     display: flex;
     gap: 4px;
@@ -120,64 +176,6 @@
     color: #0d1f19;
   }
 
-  .chord-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin: 20px 0 8px;
-    align-items: center;
-  }
-  .chord-row {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-  }
-  .chord-btn {
-    width: 64px;
-    height: 88px;
-    border-radius: 12px;
-    border: none;
-    background: linear-gradient(180deg, #2a2e35, #1a1c20);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.06);
-    color: var(--text);
-    cursor: pointer;
-    user-select: none;
-    -webkit-user-select: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font-family: inherit;
-    transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease;
-  }
-  .chord-btn .degree {
-    font-size: 18px;
-    font-weight: 700;
-  }
-  .chord-btn .quality {
-    font-size: 9px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .chord-btn .bind-key {
-    font-size: 9px;
-    font-weight: 600;
-    color: var(--muted);
-    opacity: 0.6;
-    text-transform: lowercase;
-  }
-  .chord-btn:active,
-  .chord-btn.active {
-    transform: scale(0.96);
-    background: linear-gradient(180deg, var(--accent), #3fd8ac);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.4), inset 0 2px 4px rgba(0,0,0,0.3), 0 0 18px rgba(110,231,201,0.35);
-    color: #0d1f19;
-  }
-  .chord-btn.active .quality {
-    color: #143d31;
-  }
 </style>
 </head>
 <body>
@@ -185,37 +183,46 @@
     <h1>Chord</h1>
     <p class="sub">press &amp; hold for tone</p>
 
-    <svg class="joystick" id="joystick" viewBox="0 0 220 220">
-      <defs>
-        <radialGradient id="centerGradient" cx="35%" cy="30%" r="75%">
-          <stop offset="0%" stop-color="#3a3f47" />
-          <stop offset="100%" stop-color="#22252a" />
-        </radialGradient>
-      </defs>
+    <div class="joysticks">
+      <svg class="joystick" id="degree-joystick" viewBox="0 0 220 220">
+        <defs>
+          <radialGradient id="degreeCenterGradient" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stop-color="#3a3f47" />
+            <stop offset="100%" stop-color="#22252a" />
+          </radialGradient>
+        </defs>
+      </svg>
 
-      <path class="joy-wedge" data-dir="up" d="M 94.69 73.04 L 71.73 17.61 A 100 100 0 0 1 148.27 17.61 L 125.31 73.04 A 40 40 0 0 0 94.69 73.04 Z" />
-      <path class="joy-wedge" data-dir="up-right" d="M 125.31 73.04 L 148.27 17.61 A 100 100 0 0 1 202.39 71.73 L 146.96 94.69 A 40 40 0 0 0 125.31 73.04 Z" />
-      <path class="joy-wedge" data-dir="right" d="M 146.96 94.69 L 202.39 71.73 A 100 100 0 0 1 202.39 148.27 L 146.96 125.31 A 40 40 0 0 0 146.96 94.69 Z" />
-      <path class="joy-wedge" data-dir="down-right" d="M 146.96 125.31 L 202.39 148.27 A 100 100 0 0 1 148.27 202.39 L 125.31 146.96 A 40 40 0 0 0 146.96 125.31 Z" />
-      <path class="joy-wedge" data-dir="down" d="M 125.31 146.96 L 148.27 202.39 A 100 100 0 0 1 71.73 202.39 L 94.69 146.96 A 40 40 0 0 0 125.31 146.96 Z" />
-      <path class="joy-wedge" data-dir="down-left" d="M 94.69 146.96 L 71.73 202.39 A 100 100 0 0 1 17.61 148.27 L 73.04 125.31 A 40 40 0 0 0 94.69 146.96 Z" />
-      <path class="joy-wedge" data-dir="left" d="M 73.04 125.31 L 17.61 148.27 A 100 100 0 0 1 17.61 71.73 L 73.04 94.69 A 40 40 0 0 0 73.04 125.31 Z" />
-      <path class="joy-wedge" data-dir="up-left" d="M 73.04 94.69 L 17.61 71.73 A 100 100 0 0 1 71.73 17.61 L 94.69 73.04 A 40 40 0 0 0 73.04 94.69 Z" />
+      <svg class="joystick" id="joystick" viewBox="0 0 220 220">
+        <defs>
+          <radialGradient id="centerGradient" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stop-color="#3a3f47" />
+            <stop offset="100%" stop-color="#22252a" />
+          </radialGradient>
+        </defs>
 
-      <text class="joy-label" data-dir="up" id="joy-label-up" x="110.0" y="32.0" text-anchor="middle">maj/min</text>
-      <text class="joy-label" data-dir="up-right" x="165.2" y="54.8" text-anchor="middle">dom7</text>
-      <text class="joy-label" data-dir="right" x="188.0" y="110.0" text-anchor="middle">7th</text>
-      <text class="joy-label" data-dir="down-right" x="165.2" y="165.2" text-anchor="middle">9th</text>
-      <text class="joy-label" data-dir="down" x="110.0" y="188.0" text-anchor="middle">sus4</text>
-      <text class="joy-label" data-dir="down-left" x="54.8" y="165.2" text-anchor="middle">6/sus2</text>
-      <text class="joy-label" data-dir="left" x="32.0" y="110.0" text-anchor="middle">dark</text>
-      <text class="joy-label" data-dir="up-left" x="54.8" y="54.8" text-anchor="middle">aug</text>
+        <path class="joy-wedge" data-dir="up" d="M 94.69 73.04 L 71.73 17.61 A 100 100 0 0 1 148.27 17.61 L 125.31 73.04 A 40 40 0 0 0 94.69 73.04 Z" />
+        <path class="joy-wedge" data-dir="up-right" d="M 125.31 73.04 L 148.27 17.61 A 100 100 0 0 1 202.39 71.73 L 146.96 94.69 A 40 40 0 0 0 125.31 73.04 Z" />
+        <path class="joy-wedge" data-dir="right" d="M 146.96 94.69 L 202.39 71.73 A 100 100 0 0 1 202.39 148.27 L 146.96 125.31 A 40 40 0 0 0 146.96 94.69 Z" />
+        <path class="joy-wedge" data-dir="down-right" d="M 146.96 125.31 L 202.39 148.27 A 100 100 0 0 1 148.27 202.39 L 125.31 146.96 A 40 40 0 0 0 146.96 125.31 Z" />
+        <path class="joy-wedge" data-dir="down" d="M 125.31 146.96 L 148.27 202.39 A 100 100 0 0 1 71.73 202.39 L 94.69 146.96 A 40 40 0 0 0 125.31 146.96 Z" />
+        <path class="joy-wedge" data-dir="down-left" d="M 94.69 146.96 L 71.73 202.39 A 100 100 0 0 1 17.61 148.27 L 73.04 125.31 A 40 40 0 0 0 94.69 146.96 Z" />
+        <path class="joy-wedge" data-dir="left" d="M 73.04 125.31 L 17.61 148.27 A 100 100 0 0 1 17.61 71.73 L 73.04 94.69 A 40 40 0 0 0 73.04 125.31 Z" />
+        <path class="joy-wedge" data-dir="up-left" d="M 73.04 94.69 L 17.61 71.73 A 100 100 0 0 1 71.73 17.61 L 94.69 73.04 A 40 40 0 0 0 73.04 94.69 Z" />
 
-      <circle class="joy-center" cx="110" cy="110" r="40" />
-      <text class="joy-center-label" id="joy-center" x="110" y="110"></text>
-    </svg>
+        <text class="joy-label" data-dir="up" id="joy-label-up" x="110.0" y="32.0" text-anchor="middle">maj/min</text>
+        <text class="joy-label" data-dir="up-right" x="165.2" y="54.8" text-anchor="middle">dom7</text>
+        <text class="joy-label" data-dir="right" x="188.0" y="110.0" text-anchor="middle">7th</text>
+        <text class="joy-label" data-dir="down-right" x="165.2" y="165.2" text-anchor="middle">9th</text>
+        <text class="joy-label" data-dir="down" x="110.0" y="188.0" text-anchor="middle">sus4</text>
+        <text class="joy-label" data-dir="down-left" x="54.8" y="165.2" text-anchor="middle">6/sus2</text>
+        <text class="joy-label" data-dir="left" x="32.0" y="110.0" text-anchor="middle">dark</text>
+        <text class="joy-label" data-dir="up-left" x="54.8" y="54.8" text-anchor="middle">aug</text>
 
-    <div class="chord-buttons" id="chord-buttons"></div>
+        <circle class="joy-center" cx="110" cy="110" r="40" />
+        <text class="joy-center-label" id="joy-center" x="110" y="110"></text>
+      </svg>
+    </div>
 
     <div class="key-selector" id="key-selector"></div>
   </div>
@@ -280,14 +287,31 @@
   // the HiChord manual's chord system: I ii iii IV V vi vii°.
   // 'key' is a stable identifier for each degree; 'bindKey' is the physical
   // computer-keyboard key that plays it. Odd degrees map to a-s-d-f, even to w-e-r.
+  // 'wedge'/'labelPos' are precomputed SVG geometry for the degree joystick:
+  // 7 equal 51.43deg pie slices (donut, inner r=40 outer r=100, center 110,110),
+  // starting at 12 o'clock and going clockwise, matching this array's order.
   const DEGREES = [
-    { degree: 'I',    key: '1', bindKey: 'a', semitone: 0,  quality: 'major' },
-    { degree: 'ii',   key: '2', bindKey: 'w', semitone: 2,  quality: 'minor' },
-    { degree: 'iii',  key: '3', bindKey: 's', semitone: 4,  quality: 'minor' },
-    { degree: 'IV',   key: '4', bindKey: 'e', semitone: 5,  quality: 'major' },
-    { degree: 'V',    key: '5', bindKey: 'd', semitone: 7,  quality: 'major' },
-    { degree: 'vi',   key: '6', bindKey: 'r', semitone: 9,  quality: 'minor' },
-    { degree: 'vii°', key: '7', bindKey: 'f', semitone: 11, quality: 'diminished' },
+    { degree: 'I',    key: '1', bindKey: 'a', semitone: 0,  quality: 'major',
+      wedge: 'M 92.64 73.96 L 66.61 19.90 A 100 100 0 0 1 153.39 19.90 L 127.36 73.96 A 40 40 0 0 0 92.64 73.96 Z',
+      labelPos: [110.0, 28.0], qualityPos: [110.0, 40.0] },
+    { degree: 'ii',   key: '2', bindKey: 'w', semitone: 2,  quality: 'minor',
+      wedge: 'M 127.36 73.96 L 153.39 19.90 A 100 100 0 0 1 207.49 87.75 L 149.00 101.10 A 40 40 0 0 0 127.36 73.96 Z',
+      labelPos: [171.0, 57.4], qualityPos: [171.0, 69.4] },
+    { degree: 'iii',  key: '3', bindKey: 's', semitone: 4,  quality: 'minor',
+      wedge: 'M 149.00 101.10 L 207.49 87.75 A 100 100 0 0 1 188.18 172.35 L 141.27 134.94 A 40 40 0 0 0 149.00 101.10 Z',
+      labelPos: [186.0, 123.4], qualityPos: [186.0, 135.4] },
+    { degree: 'IV',   key: '4', bindKey: 'e', semitone: 5,  quality: 'major',
+      wedge: 'M 141.27 134.94 L 188.18 172.35 A 100 100 0 0 1 110.00 210.00 L 110.00 150.00 A 40 40 0 0 0 141.27 134.94 Z',
+      labelPos: [143.8, 176.3], qualityPos: [143.8, 188.3] },
+    { degree: 'V',    key: '5', bindKey: 'd', semitone: 7,  quality: 'major',
+      wedge: 'M 110.00 150.00 L 110.00 210.00 A 100 100 0 0 1 31.82 172.35 L 78.73 134.94 A 40 40 0 0 0 110.00 150.00 Z',
+      labelPos: [76.2, 176.3], qualityPos: [76.2, 188.3] },
+    { degree: 'vi',   key: '6', bindKey: 'r', semitone: 9,  quality: 'minor',
+      wedge: 'M 78.73 134.94 L 31.82 172.35 A 100 100 0 0 1 12.51 87.75 L 71.00 101.10 A 40 40 0 0 0 78.73 134.94 Z',
+      labelPos: [34.0, 123.4], qualityPos: [34.0, 135.4] },
+    { degree: 'vii°', key: '7', bindKey: 'f', semitone: 11, quality: 'diminished',
+      wedge: 'M 71.00 101.10 L 12.51 87.75 A 100 100 0 0 1 66.61 19.90 L 92.64 73.96 A 40 40 0 0 0 71.00 101.10 Z',
+      labelPos: [49.0, 57.4], qualityPos: [49.0, 69.4] },
   ];
 
   // Natural triad intervals for each base quality.
@@ -343,24 +367,39 @@
   const degreeByBindKey = new Map(DEGREES.map(d => [d.bindKey, d]));
   const heldDegrees = new Map(); // degree key -> direction used when pressed
 
-  // --- render the 7 chord buttons: even-numbered on a top row of 3, odd on a bottom row of 4 ---
-  const buttonsEl = document.getElementById('chord-buttons');
-  const topRowEl = document.createElement('div');
-  topRowEl.className = 'chord-row';
-  const bottomRowEl = document.createElement('div');
-  bottomRowEl.className = 'chord-row';
-  buttonsEl.appendChild(topRowEl);
-  buttonsEl.appendChild(bottomRowEl);
+  // --- render the 7-wedge degree joystick ---
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS(SVG_NS, tag);
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+    return el;
+  }
+
+  const degreeJoystickEl = document.getElementById('degree-joystick');
 
   DEGREES.forEach(d => {
-    const el = document.createElement('button');
-    el.className = 'chord-btn';
-    el.dataset.key = d.key;
-    el.innerHTML = `<span class="degree">${d.degree}</span><span class="quality">${d.quality === 'diminished' ? 'dim' : d.quality}</span><span class="bind-key">${d.bindKey} / ${d.key}</span>`;
-    const isEven = Number(d.key) % 2 === 0;
-    (isEven ? topRowEl : bottomRowEl).appendChild(el);
-    d.el = el;
+    const wedgeEl = svgEl('path', { class: 'degree-wedge', 'data-key': d.key, d: d.wedge });
+    degreeJoystickEl.appendChild(wedgeEl);
+    d.wedgeEl = wedgeEl;
   });
+  DEGREES.forEach(d => {
+    const [lx, ly] = d.labelPos;
+    const labelEl = svgEl('text', { class: 'degree-label', 'data-key': d.key, x: lx, y: ly });
+    labelEl.textContent = d.degree;
+    degreeJoystickEl.appendChild(labelEl);
+    d.labelEl = labelEl;
+
+    const [qx, qy] = d.qualityPos;
+    const qualityEl = svgEl('text', { class: 'degree-quality', 'data-key': d.key, x: qx, y: qy });
+    qualityEl.textContent = d.quality === 'diminished' ? 'dim' : d.quality;
+    degreeJoystickEl.appendChild(qualityEl);
+    d.qualityEl = qualityEl;
+  });
+
+  const degreeCenterCircle = svgEl('circle', { class: 'joy-center', cx: 110, cy: 110, r: 40, fill: 'url(#degreeCenterGradient)' });
+  degreeJoystickEl.appendChild(degreeCenterCircle);
+  const degreeCenterLabel = svgEl('text', { class: 'joy-center-label', x: 110, y: 110 });
+  degreeJoystickEl.appendChild(degreeCenterLabel);
 
   // --- render the 12-key key selector ---
   const keySelectorEl = document.getElementById('key-selector');
@@ -382,9 +421,12 @@
     getChordIntervals(d.quality, currentDirection).forEach(interval => {
       startVoice(`${d.key}:${interval}`, noteFreq(currentKeyRoot + d.semitone + interval));
     });
-    d.el.classList.add('active');
+    d.wedgeEl.classList.add('active');
+    d.labelEl.classList.add('active');
+    d.qualityEl.classList.add('active');
     updateJoyCenterLabel();
     updateUpWedgeLabel();
+    updateDegreeCenterLabel();
   }
 
   function releaseDegree(d) {
@@ -394,9 +436,12 @@
     getChordIntervals(d.quality, direction).forEach(interval => {
       stopVoice(`${d.key}:${interval}`);
     });
-    d.el.classList.remove('active');
+    d.wedgeEl.classList.remove('active');
+    d.labelEl.classList.remove('active');
+    d.qualityEl.classList.remove('active');
     updateJoyCenterLabel();
     updateUpWedgeLabel();
+    updateDegreeCenterLabel();
   }
 
   function setDirection(direction) {
@@ -433,15 +478,31 @@
     });
   }
 
-  // mouse/touch interaction on the chord buttons: hovering plays the chord,
-  // moving off stops it (touch has no hover concept, so it still uses press/release)
+  // mouse/touch interaction on the degree joystick wedges: hovering a wedge
+  // plays that chord, moving off stops it (touch has no hover concept, so it
+  // still uses press/release on the wedge itself)
   DEGREES.forEach(d => {
-    d.el.addEventListener('mouseenter', () => pressDegree(d));
-    d.el.addEventListener('mouseleave', () => releaseDegree(d));
-    d.el.addEventListener('touchstart', (e) => { e.preventDefault(); pressDegree(d); }, { passive: false });
-    d.el.addEventListener('touchend', (e) => { e.preventDefault(); releaseDegree(d); }, { passive: false });
-    d.el.addEventListener('touchcancel', (e) => { e.preventDefault(); releaseDegree(d); }, { passive: false });
+    d.wedgeEl.addEventListener('mouseenter', () => pressDegree(d));
+    d.wedgeEl.addEventListener('mouseleave', () => releaseDegree(d));
+    d.wedgeEl.addEventListener('touchstart', (e) => { e.preventDefault(); pressDegree(d); }, { passive: false });
+    d.wedgeEl.addEventListener('touchend', (e) => { e.preventDefault(); releaseDegree(d); }, { passive: false });
+    d.wedgeEl.addEventListener('touchcancel', (e) => { e.preventDefault(); releaseDegree(d); }, { passive: false });
   });
+
+  // The degree joystick's center circle is a dead zone for the same reason
+  // the modifier joystick's was (flush inner radius against the wedges, no
+  // pointer-events to catch the hover) — no action needed there since there's
+  // no "center chord" to play, but give it a hover so nothing looks stuck.
+  degreeCenterCircle.addEventListener('mouseenter', () => {});
+
+  function updateDegreeCenterLabel() {
+    const heldKeys = Array.from(heldDegrees.keys());
+    if (heldKeys.length === 1) {
+      degreeCenterLabel.textContent = degreeByKey.get(heldKeys[0]).degree;
+    } else {
+      degreeCenterLabel.textContent = '';
+    }
+  }
 
   // physical computer-keyboard interaction: odd degrees on a-s-d-f, even on
   // w-e-r, plus the number row 1-7 as an alternate binding for the same degrees
