@@ -44,65 +44,50 @@
     font-size: 13px;
   }
   .joystick {
-    position: relative;
-    width: 180px;
-    height: 180px;
+    width: 220px;
+    height: 220px;
     margin: 8px auto 0;
-    border-radius: 50%;
-    background: radial-gradient(circle at 50% 40%, #2a2e35, #16181c 75%);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.06);
     user-select: none;
     -webkit-user-select: none;
   }
   .joy-wedge {
-    position: absolute;
-    width: 50%;
-    height: 50%;
-    display: flex;
     cursor: pointer;
+    fill: #22252a;
+    stroke: #0c0d0f;
+    stroke-width: 1;
+    transition: fill 0.1s ease;
   }
-  .joy-wedge span {
-    display: block;
-    font-size: 9px;
+  .joy-wedge:hover,
+  .joy-wedge.active {
+    fill: var(--accent-active);
+  }
+  .joy-label {
+    font-size: 8.5px;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
-    color: var(--muted);
-    transition: color 0.1s ease;
+    fill: var(--muted);
+    pointer-events: none;
+    transition: fill 0.1s ease;
   }
-  /* place each wedge's label near the rim in its compass direction */
-  .joy-wedge[data-dir="up"]         { top: 0;    left: 25%; justify-content: center; align-items: flex-start; }
-  .joy-wedge[data-dir="up-right"]   { top: 0;    left: 50%; justify-content: flex-end; align-items: flex-start; }
-  .joy-wedge[data-dir="right"]      { top: 25%;  left: 50%; justify-content: flex-end; align-items: center; }
-  .joy-wedge[data-dir="down-right"] { top: 50%;  left: 50%; justify-content: flex-end; align-items: flex-end; }
-  .joy-wedge[data-dir="down"]       { top: 50%;  left: 25%; justify-content: center; align-items: flex-end; }
-  .joy-wedge[data-dir="down-left"]  { top: 50%;  left: 0;   justify-content: flex-start; align-items: flex-end; }
-  .joy-wedge[data-dir="left"]       { top: 25%;  left: 0;   justify-content: flex-start; align-items: center; }
-  .joy-wedge[data-dir="up-left"]    { top: 0;    left: 0;   justify-content: flex-start; align-items: flex-start; }
-  .joy-wedge span { padding: 10px; }
-
-  .joy-wedge.active span {
-    color: var(--accent);
+  .joy-wedge:hover + .joy-label,
+  .joy-label.active {
+    fill: #0d1f19;
   }
-
   .joy-center {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 64px;
-    height: 64px;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    background: linear-gradient(145deg, #3a3f47, #22252a);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
+    fill: url(#centerGradient);
+    stroke: rgba(255,255,255,0.08);
+    stroke-width: 1;
+    pointer-events: none;
+  }
+  .joy-center-label {
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--accent);
+    fill: var(--accent);
+    text-anchor: middle;
+    dominant-baseline: middle;
     pointer-events: none;
   }
 
@@ -164,17 +149,35 @@
     <h1>Chord</h1>
     <p class="sub">press &amp; hold for tone</p>
 
-    <div class="joystick" id="joystick">
-      <div class="joy-wedge" data-dir="up"><span>maj/min</span></div>
-      <div class="joy-wedge" data-dir="up-right"><span>dom7</span></div>
-      <div class="joy-wedge" data-dir="right"><span>7th</span></div>
-      <div class="joy-wedge" data-dir="down-right"><span>9th</span></div>
-      <div class="joy-wedge" data-dir="down"><span>sus4</span></div>
-      <div class="joy-wedge" data-dir="down-left"><span>6/sus2</span></div>
-      <div class="joy-wedge" data-dir="left"><span>darken</span></div>
-      <div class="joy-wedge" data-dir="up-left"><span>aug</span></div>
-      <div class="joy-center" id="joy-center">maj</div>
-    </div>
+    <svg class="joystick" id="joystick" viewBox="0 0 220 220">
+      <defs>
+        <radialGradient id="centerGradient" cx="35%" cy="30%" r="75%">
+          <stop offset="0%" stop-color="#3a3f47" />
+          <stop offset="100%" stop-color="#22252a" />
+        </radialGradient>
+      </defs>
+
+      <path class="joy-wedge" data-dir="up" d="M 94.69 73.04 L 71.73 17.61 A 100 100 0 0 1 148.27 17.61 L 125.31 73.04 A 40 40 0 0 0 94.69 73.04 Z" />
+      <path class="joy-wedge" data-dir="up-right" d="M 125.31 73.04 L 148.27 17.61 A 100 100 0 0 1 202.39 71.73 L 146.96 94.69 A 40 40 0 0 0 125.31 73.04 Z" />
+      <path class="joy-wedge" data-dir="right" d="M 146.96 94.69 L 202.39 71.73 A 100 100 0 0 1 202.39 148.27 L 146.96 125.31 A 40 40 0 0 0 146.96 94.69 Z" />
+      <path class="joy-wedge" data-dir="down-right" d="M 146.96 125.31 L 202.39 148.27 A 100 100 0 0 1 148.27 202.39 L 125.31 146.96 A 40 40 0 0 0 146.96 125.31 Z" />
+      <path class="joy-wedge" data-dir="down" d="M 125.31 146.96 L 148.27 202.39 A 100 100 0 0 1 71.73 202.39 L 94.69 146.96 A 40 40 0 0 0 125.31 146.96 Z" />
+      <path class="joy-wedge" data-dir="down-left" d="M 94.69 146.96 L 71.73 202.39 A 100 100 0 0 1 17.61 148.27 L 73.04 125.31 A 40 40 0 0 0 94.69 146.96 Z" />
+      <path class="joy-wedge" data-dir="left" d="M 73.04 125.31 L 17.61 148.27 A 100 100 0 0 1 17.61 71.73 L 73.04 94.69 A 40 40 0 0 0 73.04 125.31 Z" />
+      <path class="joy-wedge" data-dir="up-left" d="M 73.04 94.69 L 17.61 71.73 A 100 100 0 0 1 71.73 17.61 L 94.69 73.04 A 40 40 0 0 0 73.04 94.69 Z" />
+
+      <text class="joy-label" data-dir="up" x="110.0" y="32.0" text-anchor="middle">maj/min</text>
+      <text class="joy-label" data-dir="up-right" x="165.2" y="54.8" text-anchor="middle">dom7</text>
+      <text class="joy-label" data-dir="right" x="188.0" y="110.0" text-anchor="middle">7th</text>
+      <text class="joy-label" data-dir="down-right" x="165.2" y="165.2" text-anchor="middle">9th</text>
+      <text class="joy-label" data-dir="down" x="110.0" y="188.0" text-anchor="middle">sus4</text>
+      <text class="joy-label" data-dir="down-left" x="54.8" y="165.2" text-anchor="middle">6/sus2</text>
+      <text class="joy-label" data-dir="left" x="32.0" y="110.0" text-anchor="middle">dark</text>
+      <text class="joy-label" data-dir="up-left" x="54.8" y="54.8" text-anchor="middle">aug</text>
+
+      <circle class="joy-center" cx="110" cy="110" r="40" />
+      <text class="joy-center-label" id="joy-center" x="110" y="110">maj</text>
+    </svg>
 
     <div class="keyboard" id="keyboard"></div>
   </div>
@@ -371,10 +374,12 @@
   const joystickEl = document.getElementById('joystick');
   const joyCenterEl = document.getElementById('joy-center');
   const joyWedges = document.querySelectorAll('.joy-wedge');
+  const joyLabels = document.querySelectorAll('.joy-label');
 
   function setJoyDirection(dir) {
     setChord(dir);
     joyWedges.forEach(w => w.classList.toggle('active', w.dataset.dir === dir));
+    joyLabels.forEach(l => l.classList.toggle('active', l.dataset.dir === dir));
     joyCenterEl.textContent = CHORD_LABELS[dir];
   }
 
