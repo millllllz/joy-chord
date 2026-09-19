@@ -1,7 +1,7 @@
 // Cache name is tied to the on-page build-version tag in index.html — bump
 // both together so a new deploy invalidates the old cache instead of a
 // visitor getting stuck on a stale offline copy forever.
-const CACHE_NAME = 'chord-v17';
+const CACHE_NAME = 'chord-v18';
 const ASSETS = [
   './',
   './index.html',

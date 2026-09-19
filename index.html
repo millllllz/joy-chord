@@ -239,6 +239,35 @@
     background: #2c3038;
   }
 
+  .fx-toggles {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 1000;
+    display: flex;
+    gap: 8px;
+  }
+  .fx-toggle {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: none;
+    background: #22252a;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background 0.1s ease, color 0.1s ease;
+  }
+  .fx-toggle:hover {
+    background: #2c3038;
+  }
+  .fx-toggle.active {
+    background: var(--accent-active);
+    color: #0d1f19;
+  }
+
   .fullscreen-btn {
     position: fixed;
     top: 12px;
@@ -320,6 +349,11 @@
 </style>
 </head>
 <body>
+  <div class="fx-toggles">
+    <button class="fx-toggle" id="delay-toggle" type="button" aria-pressed="true">Delay</button>
+    <button class="fx-toggle" id="reverb-toggle" type="button" aria-pressed="true">Reverb</button>
+  </div>
+
   <button class="fullscreen-btn" id="fullscreen-btn" aria-label="Toggle fullscreen" type="button">
     <svg id="fullscreen-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
@@ -329,7 +363,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v17</div>
+  <div class="build-version">v18</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -385,8 +419,12 @@
 
   // Shared delay send: every voice's gain feeds into this in parallel with
   // the dry destination connection, so one feedback delay line is reused
-  // across all voices instead of building a delay chain per note.
+  // across all voices instead of building a delay chain per note. Each
+  // effect is toggled independently by ramping its shared send gain
+  // between 0 and its normal level, rather than connecting/disconnecting
+  // every voice — one node change affects all current and future voices.
   let delaySend = null;
+  let delayEnabled = true;
   const DELAY_TIME = 0.28;
   const DELAY_FEEDBACK = 0.32;
   const DELAY_SEND_LEVEL = 0.22;
@@ -396,8 +434,11 @@
   // than loaded from an audio file, matching the no-external-assets,
   // no-build-step nature of this project.
   let reverbSend = null;
+  let reverbEnabled = true;
   const REVERB_DECAY = 2.2; // seconds
   const REVERB_SEND_LEVEL = 0.18;
+
+  const FX_RAMP = 0.05; // seconds — short enough to feel instant, long enough to avoid a click
 
   function createReverbImpulse(ctx) {
     const length = Math.floor(ctx.sampleRate * REVERB_DECAY);
@@ -422,7 +463,7 @@
       audioCtx = new AudioCtx();
 
       delaySend = audioCtx.createGain();
-      delaySend.gain.value = DELAY_SEND_LEVEL;
+      delaySend.gain.value = delayEnabled ? DELAY_SEND_LEVEL : 0;
 
       const delayNode = audioCtx.createDelay(1.0);
       delayNode.delayTime.value = DELAY_TIME;
@@ -436,7 +477,7 @@
       delayNode.connect(audioCtx.destination);
 
       reverbSend = audioCtx.createGain();
-      reverbSend.gain.value = REVERB_SEND_LEVEL;
+      reverbSend.gain.value = reverbEnabled ? REVERB_SEND_LEVEL : 0;
 
       const convolver = audioCtx.createConvolver();
       convolver.buffer = createReverbImpulse(audioCtx);
@@ -446,6 +487,42 @@
     }
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
+
+  // --- effect toggles: delay and reverb are independent, each just ramps
+  // its shared send gain between 0 and its normal level, so they can be on
+  // together, either alone, or both off ---
+  const delayToggleBtn = document.getElementById('delay-toggle');
+  const reverbToggleBtn = document.getElementById('reverb-toggle');
+
+  function setDelayEnabled(enabled) {
+    delayEnabled = enabled;
+    if (audioCtx) {
+      const now = audioCtx.currentTime;
+      delaySend.gain.cancelScheduledValues(now);
+      delaySend.gain.setValueAtTime(delaySend.gain.value, now);
+      delaySend.gain.linearRampToValueAtTime(enabled ? DELAY_SEND_LEVEL : 0, now + FX_RAMP);
+    }
+    delayToggleBtn.classList.toggle('active', enabled);
+    delayToggleBtn.setAttribute('aria-pressed', String(enabled));
+  }
+
+  function setReverbEnabled(enabled) {
+    reverbEnabled = enabled;
+    if (audioCtx) {
+      const now = audioCtx.currentTime;
+      reverbSend.gain.cancelScheduledValues(now);
+      reverbSend.gain.setValueAtTime(reverbSend.gain.value, now);
+      reverbSend.gain.linearRampToValueAtTime(enabled ? REVERB_SEND_LEVEL : 0, now + FX_RAMP);
+    }
+    reverbToggleBtn.classList.toggle('active', enabled);
+    reverbToggleBtn.setAttribute('aria-pressed', String(enabled));
+  }
+
+  delayToggleBtn.addEventListener('click', () => setDelayEnabled(!delayEnabled));
+  reverbToggleBtn.addEventListener('click', () => setReverbEnabled(!reverbEnabled));
+
+  setDelayEnabled(delayEnabled);
+  setReverbEnabled(reverbEnabled);
 
   const ATTACK = 0.01;
   const RELEASE = 0.08;
