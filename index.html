@@ -59,6 +59,52 @@
       height: min(60vmin, 44vw);
     }
   }
+  /* In the default (portrait) flex layout, the dropdown lives inside
+     .joysticks (between the two <svg>s in DOM order, for landscape's sake)
+     but should wrap onto its own centered line below both joysticks here,
+     not sit between them. Setting it to a full-width flex item forces the
+     wrap without needing 'order' (avoids an ID-vs-class specificity fight
+     with the landscape rules below, which target the same elements). */
+  .joysticks .key-select {
+    flex-basis: 100%;
+    max-width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    order: 3;
+  }
+
+  /* Landscape: give the joysticks the whole viewport height (they're square,
+     so height is the binding dimension), with the key dropdown centered in
+     the gap between them instead of stacked underneath. */
+  @media (orientation: landscape) {
+    .synth {
+      padding: 2vh 3vw;
+    }
+    .joysticks {
+      display: grid;
+      grid-template-columns: auto auto auto;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(12px, 3vw, 40px);
+      flex-wrap: nowrap;
+      width: 100%;
+    }
+    .joystick {
+      /* square, capped by whichever of height/width is tighter: full
+         viewport height (minus vertical padding) or roughly 40% of the
+         width, since two joysticks + the dropdown share the row */
+      width: min(88vh, 42vw);
+      height: min(88vh, 42vw);
+      max-width: none;
+      max-height: none;
+    }
+    .joysticks .key-select {
+      margin: 0;
+      flex-basis: auto;
+      order: 0;
+      justify-self: center;
+    }
+  }
   .joy-wedge {
     cursor: pointer;
     fill: #22252a;
@@ -245,7 +291,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v8</div>
+  <div class="build-version">v9</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -259,6 +305,8 @@
           </radialGradient>
         </defs>
       </svg>
+
+      <select class="key-select" id="key-select"></select>
 
       <svg class="joystick" id="joystick" viewBox="0 0 220 220">
         <defs>
@@ -290,8 +338,6 @@
         <text class="joy-center-label" id="joy-center" x="110" y="110"></text>
       </svg>
     </div>
-
-    <select class="key-select" id="key-select"></select>
   </div>
 
 <script>
@@ -317,7 +363,7 @@
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
 
-    osc.type = 'sawtooth';
+    osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
     gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
