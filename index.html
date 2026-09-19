@@ -115,7 +115,7 @@
 
   const ATTACK = 0.01;
   const RELEASE = 0.08;
-  const GAIN = 0.3;
+  const GAIN = 0.15;
 
   // active voices, keyed by an arbitrary id (note name or 'btn')
   const voices = new Map();
@@ -177,6 +177,9 @@
     return FREQ_C4 * Math.pow(2, semitonesFromC4 / 12);
   }
 
+  // major triad: root, major third, perfect fifth
+  const MAJOR_TRIAD_INTERVALS = [0, 4, 7];
+
   const keyByChar = new Map(NOTE_MAP.map(n => [n.key, n]));
   const heldKeys = new Set();
 
@@ -213,14 +216,18 @@
   function pressNote(n) {
     if (heldKeys.has(n.key)) return;
     heldKeys.add(n.key);
-    startVoice(n.key, noteFreq(n.semitone));
+    MAJOR_TRIAD_INTERVALS.forEach(interval => {
+      startVoice(`${n.key}:${interval}`, noteFreq(n.semitone + interval));
+    });
     n.el.classList.add('active');
   }
 
   function releaseNote(n) {
     if (!heldKeys.has(n.key)) return;
     heldKeys.delete(n.key);
-    stopVoice(n.key);
+    MAJOR_TRIAD_INTERVALS.forEach(interval => {
+      stopVoice(`${n.key}:${interval}`);
+    });
     n.el.classList.remove('active');
   }
 
