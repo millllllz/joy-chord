@@ -68,6 +68,58 @@
     transform: scale(0.96);
     box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 2px 4px rgba(0,0,0,0.5), 0 0 24px rgba(110,231,201,0.35);
   }
+
+  .keyboard {
+    position: relative;
+    display: flex;
+    margin: 36px 0 8px;
+    height: 160px;
+    width: 336px;
+  }
+  .key {
+    position: relative;
+    border: 1px solid #0c0d0f;
+    border-radius: 0 0 6px 6px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .key.white {
+    position: relative;
+    width: 48px;
+    height: 160px;
+    background: linear-gradient(180deg, #f4f4f4, #e2e2e2);
+    color: #666;
+    box-shadow: inset 0 -3px 4px rgba(0,0,0,0.08);
+    z-index: 1;
+  }
+  .key.white.active {
+    background: linear-gradient(180deg, var(--accent), #4fcfaa);
+    color: #10221c;
+  }
+  .key.black {
+    position: absolute;
+    top: 0;
+    width: 30px;
+    height: 98px;
+    background: linear-gradient(180deg, #333, #0f0f0f);
+    color: #999;
+    border-radius: 0 0 4px 4px;
+    z-index: 2;
+    padding-bottom: 8px;
+    font-size: 10px;
+  }
+  .key.black.active {
+    background: linear-gradient(180deg, var(--accent-active), #2aa886);
+    color: #062015;
+  }
 </style>
 </head>
 <body>
@@ -75,67 +127,163 @@
     <h1>Chord</h1>
     <p class="sub">press &amp; hold for tone</p>
     <button id="tone-btn">Play</button>
+
+    <div class="keyboard" id="keyboard"></div>
   </div>
 
 <script>
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   let audioCtx = null;
-  let osc = null;
-  let gainNode = null;
-
-  const FREQ = 261.63; // C4
-  const ATTACK = 0.01;
-  const RELEASE = 0.08;
 
   function ensureContext() {
     if (!audioCtx) audioCtx = new AudioCtx();
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
 
-  function startTone() {
-    ensureContext();
-    if (osc) return; // already playing
+  const ATTACK = 0.01;
+  const RELEASE = 0.08;
+  const GAIN = 0.3;
 
-    osc = audioCtx.createOscillator();
-    gainNode = audioCtx.createGain();
+  // active voices, keyed by an arbitrary id (note name or 'btn')
+  const voices = new Map();
+
+  function startVoice(id, freq) {
+    ensureContext();
+    if (voices.has(id)) return;
+
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
 
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(FREQ, audioCtx.currentTime);
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
     gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + ATTACK);
+    gainNode.gain.linearRampToValueAtTime(GAIN, audioCtx.currentTime + ATTACK);
 
     osc.connect(gainNode);
     gainNode.connect(audioCtx.destination);
     osc.start();
 
-    btn.classList.add('active');
+    voices.set(id, { osc, gainNode });
   }
 
-  function stopTone() {
-    if (!osc) return;
+  function stopVoice(id) {
+    const voice = voices.get(id);
+    if (!voice) return;
+    const { osc, gainNode } = voice;
     const now = audioCtx.currentTime;
     gainNode.gain.cancelScheduledValues(now);
     gainNode.gain.setValueAtTime(gainNode.gain.value, now);
     gainNode.gain.linearRampToValueAtTime(0, now + RELEASE);
+    osc.stop(now + RELEASE + 0.02);
 
-    const oscToStop = osc;
-    oscToStop.stop(now + RELEASE + 0.02);
-    osc = null;
-    gainNode = null;
-
-    btn.classList.remove('active');
+    voices.delete(id);
   }
 
+  // --- single tone button ---
+  const FREQ_C4 = 261.63;
   const btn = document.getElementById('tone-btn');
 
-  btn.addEventListener('mousedown', startTone);
-  btn.addEventListener('mouseup', stopTone);
-  btn.addEventListener('mouseleave', stopTone);
+  btn.addEventListener('mousedown', () => { startVoice('btn', FREQ_C4); btn.classList.add('active'); });
+  btn.addEventListener('mouseup', () => { stopVoice('btn'); btn.classList.remove('active'); });
+  btn.addEventListener('mouseleave', () => { stopVoice('btn'); btn.classList.remove('active'); });
 
-  btn.addEventListener('touchstart', (e) => { e.preventDefault(); startTone(); }, { passive: false });
-  btn.addEventListener('touchend', (e) => { e.preventDefault(); stopTone(); }, { passive: false });
-  btn.addEventListener('touchcancel', (e) => { e.preventDefault(); stopTone(); }, { passive: false });
+  btn.addEventListener('touchstart', (e) => { e.preventDefault(); startVoice('btn', FREQ_C4); btn.classList.add('active'); }, { passive: false });
+  btn.addEventListener('touchend', (e) => { e.preventDefault(); stopVoice('btn'); btn.classList.remove('active'); }, { passive: false });
+  btn.addEventListener('touchcancel', (e) => { e.preventDefault(); stopVoice('btn'); btn.classList.remove('active'); }, { passive: false });
+
+  // --- single-octave keyboard: 'a' = middle C (C4), 'w' = C#4 ---
+  // Standard piano-style row mapping.
+  const NOTE_MAP = [
+    { key: 'a', note: 'C4',  semitone: 0,  type: 'white' },
+    { key: 'w', note: 'C#4', semitone: 1,  type: 'black' },
+    { key: 's', note: 'D4',  semitone: 2,  type: 'white' },
+    { key: 'e', note: 'D#4', semitone: 3,  type: 'black' },
+    { key: 'd', note: 'E4',  semitone: 4,  type: 'white' },
+    { key: 'f', note: 'F4',  semitone: 5,  type: 'white' },
+    { key: 't', note: 'F#4', semitone: 6,  type: 'black' },
+    { key: 'g', note: 'G4',  semitone: 7,  type: 'white' },
+    { key: 'y', note: 'G#4', semitone: 8,  type: 'black' },
+    { key: 'h', note: 'A4',  semitone: 9,  type: 'white' },
+    { key: 'u', note: 'A#4', semitone: 10, type: 'black' },
+    { key: 'j', note: 'B4',  semitone: 11, type: 'white' },
+    { key: 'k', note: 'C5',  semitone: 12, type: 'white' },
+  ];
+
+  function noteFreq(semitonesFromC4) {
+    return FREQ_C4 * Math.pow(2, semitonesFromC4 / 12);
+  }
+
+  const keyByChar = new Map(NOTE_MAP.map(n => [n.key, n]));
+  const heldKeys = new Set();
+
+  // --- render keyboard UI ---
+  const keyboardEl = document.getElementById('keyboard');
+  const whiteKeys = NOTE_MAP.filter(n => n.type === 'white');
+  const blackKeys = NOTE_MAP.filter(n => n.type === 'black');
+  const WHITE_KEY_WIDTH = 48;
+
+  whiteKeys.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'key white';
+    el.dataset.key = n.key;
+    el.textContent = n.key;
+    keyboardEl.appendChild(el);
+    n.el = el;
+  });
+
+  // black key horizontal offsets, indexed by which white key they sit between
+  const blackOffsetByNote = {
+    'C#4': 1, 'D#4': 2, 'F#4': 4, 'G#4': 5, 'A#4': 6,
+  };
+  blackKeys.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'key black';
+    el.dataset.key = n.key;
+    el.textContent = n.key;
+    const whiteIndex = blackOffsetByNote[n.note];
+    el.style.left = `${whiteIndex * WHITE_KEY_WIDTH - 15}px`;
+    keyboardEl.appendChild(el);
+    n.el = el;
+  });
+
+  function pressNote(n) {
+    if (heldKeys.has(n.key)) return;
+    heldKeys.add(n.key);
+    startVoice(n.key, noteFreq(n.semitone));
+    n.el.classList.add('active');
+  }
+
+  function releaseNote(n) {
+    if (!heldKeys.has(n.key)) return;
+    heldKeys.delete(n.key);
+    stopVoice(n.key);
+    n.el.classList.remove('active');
+  }
+
+  // mouse/touch interaction directly on keyboard keys
+  NOTE_MAP.forEach(n => {
+    n.el.addEventListener('mousedown', () => pressNote(n));
+    n.el.addEventListener('mouseup', () => releaseNote(n));
+    n.el.addEventListener('mouseleave', () => releaseNote(n));
+    n.el.addEventListener('touchstart', (e) => { e.preventDefault(); pressNote(n); }, { passive: false });
+    n.el.addEventListener('touchend', (e) => { e.preventDefault(); releaseNote(n); }, { passive: false });
+    n.el.addEventListener('touchcancel', (e) => { e.preventDefault(); releaseNote(n); }, { passive: false });
+  });
+
+  // physical computer-keyboard interaction
+  window.addEventListener('keydown', (e) => {
+    if (e.repeat) return;
+    const n = keyByChar.get(e.key.toLowerCase());
+    if (!n) return;
+    pressNote(n);
+  });
+
+  window.addEventListener('keyup', (e) => {
+    const n = keyByChar.get(e.key.toLowerCase());
+    if (!n) return;
+    releaseNote(n);
+  });
 </script>
 </body>
 </html>
