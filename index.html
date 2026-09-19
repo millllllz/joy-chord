@@ -205,6 +205,41 @@
     opacity: 0.5;
     pointer-events: none;
   }
+
+  .debug-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+    max-height: 40vh;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.9);
+    color: #6ee7c9;
+    font-family: monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    padding: 8px 10px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    display: none;
+  }
+  .debug-panel.visible {
+    display: block;
+  }
+  .debug-toggle {
+    position: fixed;
+    bottom: 8px;
+    right: 12px;
+    z-index: 2000;
+    font-size: 10px;
+    font-family: monospace;
+    color: var(--muted);
+    background: none;
+    border: none;
+    opacity: 0.5;
+    padding: 4px;
+  }
 </style>
 </head>
 <body>
@@ -217,7 +252,9 @@
     </svg>
   </button>
 
-  <div class="build-version">v1</div>
+  <div class="build-version">v2</div>
+  <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
+  <div class="debug-panel" id="debug-panel"></div>
 
   <div class="synth">
     <div class="joysticks">
@@ -709,12 +746,37 @@
   joystickEl.addEventListener('touchend', endModifierTouch, { passive: false });
   joystickEl.addEventListener('touchcancel', endModifierTouch, { passive: false });
 
+  // --- on-page debug panel: shows what actually happens on tap, readable
+  // directly on a phone screen with no cable/remote-debugging needed ---
+  const debugPanel = document.getElementById('debug-panel');
+  const debugToggle = document.getElementById('debug-toggle');
+  function debugLog(msg) {
+    const line = document.createElement('div');
+    const time = new Date().toISOString().split('T')[1].replace('Z', '');
+    line.textContent = `[${time}] ${msg}`;
+    debugPanel.appendChild(line);
+    debugPanel.scrollTop = debugPanel.scrollHeight;
+  }
+  debugToggle.addEventListener('click', () => {
+    debugPanel.classList.toggle('visible');
+  });
+  window.addEventListener('error', (e) => {
+    debugLog(`window error: ${e.message} (${e.filename}:${e.lineno})`);
+  });
+
   // --- fullscreen toggle: hides browser chrome via the Fullscreen API (only
   // works from a user gesture; can't be triggered automatically on load, and
   // doesn't hide OS-level UI like iOS's home-indicator swipe area) ---
   const fullscreenBtn = document.getElementById('fullscreen-btn');
   const expandIcon = document.getElementById('fullscreen-icon-expand');
   const collapseIcon = document.getElementById('fullscreen-icon-collapse');
+
+  debugLog(`ua: ${navigator.userAgent}`);
+  debugLog(`fullscreenEnabled: ${document.fullscreenEnabled}`);
+  debugLog(`document.documentElement.requestFullscreen: ${typeof document.documentElement.requestFullscreen}`);
+  debugLog(`document.documentElement.webkitRequestFullscreen: ${typeof document.documentElement.webkitRequestFullscreen}`);
+  debugLog(`isSecureContext: ${window.isSecureContext}`);
+  debugLog(`in iframe: ${window.self !== window.top}`);
 
   function isFullscreen() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
@@ -727,24 +789,48 @@
   }
 
   fullscreenBtn.addEventListener('click', () => {
+    debugLog('fullscreen button click fired');
     if (!isFullscreen()) {
       const el = document.documentElement;
       const request = el.requestFullscreen || el.webkitRequestFullscreen;
-      if (!request) return;
-      Promise.resolve(request.call(el)).catch(err => {
-        console.error('Fullscreen request failed:', err);
-      });
+      if (!request) {
+        debugLog('no requestFullscreen function found on documentElement');
+        return;
+      }
+      debugLog('calling requestFullscreen...');
+      try {
+        const result = request.call(el);
+        Promise.resolve(result).then(() => {
+          debugLog('requestFullscreen resolved OK');
+        }).catch(err => {
+          debugLog(`requestFullscreen rejected: ${err.name}: ${err.message}`);
+        });
+      } catch (err) {
+        debugLog(`requestFullscreen threw synchronously: ${err.name}: ${err.message}`);
+      }
     } else {
+      debugLog('already fullscreen, calling exitFullscreen...');
       const exit = document.exitFullscreen || document.webkitExitFullscreen;
-      if (!exit) return;
-      Promise.resolve(exit.call(document)).catch(err => {
-        console.error('Exit fullscreen failed:', err);
+      if (!exit) {
+        debugLog('no exitFullscreen function found');
+        return;
+      }
+      Promise.resolve(exit.call(document)).then(() => {
+        debugLog('exitFullscreen resolved OK');
+      }).catch(err => {
+        debugLog(`exitFullscreen rejected: ${err.name}: ${err.message}`);
       });
     }
   });
 
-  document.addEventListener('fullscreenchange', updateFullscreenIcon);
-  document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
+  document.addEventListener('fullscreenchange', () => {
+    debugLog(`fullscreenchange event fired, isFullscreen=${isFullscreen()}`);
+    updateFullscreenIcon();
+  });
+  document.addEventListener('webkitfullscreenchange', () => {
+    debugLog(`webkitfullscreenchange event fired, isFullscreen=${isFullscreen()}`);
+    updateFullscreenIcon();
+  });
 </script>
 </body>
 </html>
