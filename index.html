@@ -141,15 +141,6 @@
     fill: #0d1f19;
     opacity: 0.85;
   }
-  .degree-bind-key {
-    font-size: 7px;
-    font-weight: 600;
-    fill: var(--muted);
-    opacity: 0.5;
-    pointer-events: none;
-    text-anchor: middle;
-    text-transform: lowercase;
-  }
 
   .key-select {
     margin: clamp(16px, 3vmin, 28px) 0 0;
@@ -257,7 +248,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v3</div>
+  <div class="build-version">v4</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -315,8 +306,8 @@
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
 
-  const ATTACK = 0.5;
-  const RELEASE = 0.5;
+  const ATTACK = 0.01;
+  const RELEASE = 0.08;
   const GAIN = 0.15;
 
   // active voices, keyed by an arbitrary id (note name or 'btn')
@@ -444,7 +435,8 @@
 
   const degreeByKey = new Map(DEGREES.map(d => [d.key, d]));
   const degreeByBindKey = new Map(DEGREES.map(d => [d.bindKey, d]));
-  const heldDegrees = new Map(); // degree key -> direction used when pressed
+  const heldDegrees = new Map(); // degree key -> direction it's currently sounding under
+  const heldVoices = new Map();  // degree key -> Set of voice ids currently playing for it
 
   // --- render the 7-wedge degree joystick ---
   const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -493,67 +485,79 @@
     setKeyRoot(Number(keySelectEl.value));
   });
 
+  // The set of voices a held degree should currently be sounding, as a
+  // Map of voiceId -> frequency, given a joystick direction. Voice ids are
+  // keyed by note name (pitch class + octave) rather than raw interval, so a
+  // note keeps a stable id across direction/key changes and duplicate pitches
+  // across degrees don't collide.
+  function voicesForDegree(d, direction) {
+    const target = new Map();
+    getChordIntervals(d.quality, direction).forEach(interval => {
+      const semitone = currentKeyRoot + d.semitone + interval;
+      target.set(`${d.key}:${semitone}`, noteFreq(semitone));
+    });
+    return target;
+  }
+
+  // Reconcile the voices currently playing for a held degree against the
+  // target set: stop only departing notes, start only new ones, and leave
+  // shared notes ringing untouched. This avoids re-attacking sustained notes
+  // when the chord only gains/loses a tone (e.g. nudging the joystick from a
+  // triad to a 7th), which otherwise produces an audible click/re-swell.
+  function updateDegreeVoicing(d, direction) {
+    const target = voicesForDegree(d, direction);
+    // stop voices no longer wanted
+    (heldVoices.get(d.key) || new Set()).forEach(id => {
+      if (!target.has(id)) stopVoice(id);
+    });
+    // start voices newly wanted (startVoice is a no-op if already sounding)
+    target.forEach((freq, id) => startVoice(id, freq));
+    heldVoices.set(d.key, new Set(target.keys()));
+  }
+
   function pressDegree(d) {
     if (heldDegrees.has(d.key)) return;
     heldDegrees.set(d.key, currentDirection);
-    getChordIntervals(d.quality, currentDirection).forEach(interval => {
-      startVoice(`${d.key}:${interval}`, noteFreq(currentKeyRoot + d.semitone + interval));
-    });
+    updateDegreeVoicing(d, currentDirection);
     d.wedgeEl.classList.add('active');
     d.labelEl.classList.add('active');
     d.qualityEl.classList.add('active');
-    updateJoyCenterLabel();
-    updateUpWedgeLabel();
-    updateDegreeCenterLabel();
+    refreshLabels();
   }
 
   function releaseDegree(d) {
     if (!heldDegrees.has(d.key)) return;
-    const direction = heldDegrees.get(d.key);
     heldDegrees.delete(d.key);
-    getChordIntervals(d.quality, direction).forEach(interval => {
-      stopVoice(`${d.key}:${interval}`);
-    });
+    (heldVoices.get(d.key) || new Set()).forEach(id => stopVoice(id));
+    heldVoices.delete(d.key);
     d.wedgeEl.classList.remove('active');
     d.labelEl.classList.remove('active');
     d.qualityEl.classList.remove('active');
-    updateJoyCenterLabel();
-    updateUpWedgeLabel();
-    updateDegreeCenterLabel();
+    refreshLabels();
+  }
+
+  // Re-voice every held degree for the current direction/key. Used when the
+  // joystick direction changes (only chords held under the OLD direction
+  // follow the stick) or the key changes (all held chords transpose).
+  function revoiceHeld() {
+    heldDegrees.forEach((_, key) => {
+      updateDegreeVoicing(degreeByKey.get(key), currentDirection);
+      heldDegrees.set(key, currentDirection);
+    });
   }
 
   function setDirection(direction) {
     if (direction === currentDirection) return;
-    const previousDirection = currentDirection;
     currentDirection = direction;
-
-    // live-retune any buttons currently held: swap out old interval voices for the new direction
-    heldDegrees.forEach((heldDirection, key) => {
-      if (heldDirection === previousDirection) {
-        const d = degreeByKey.get(key);
-        getChordIntervals(d.quality, previousDirection).forEach(interval => stopVoice(`${key}:${interval}`));
-        getChordIntervals(d.quality, direction).forEach(interval => {
-          startVoice(`${key}:${interval}`, noteFreq(currentKeyRoot + d.semitone + interval));
-        });
-        heldDegrees.set(key, direction);
-      }
-    });
+    revoiceHeld();
   }
 
-  // Changing key while chords are held retunes them live, the same way the
-  // joystick direction does, so switching key mid-chord doesn't cut the sound.
+  // Changing key while chords are held retunes them live, so switching key
+  // mid-chord doesn't cut the sound.
   function setKeyRoot(root) {
     if (root === currentKeyRoot) return;
-    const previousRoot = currentKeyRoot;
     currentKeyRoot = root;
-
-    heldDegrees.forEach((direction, key) => {
-      const d = degreeByKey.get(key);
-      getChordIntervals(d.quality, direction).forEach(interval => stopVoice(`${key}:${interval}`));
-      getChordIntervals(d.quality, direction).forEach(interval => {
-        startVoice(`${key}:${interval}`, noteFreq(currentKeyRoot + d.semitone + interval));
-      });
-    });
+    revoiceHeld();
   }
 
   // mouse interaction on the degree joystick wedges: hovering a wedge plays
@@ -616,12 +620,6 @@
   degreeJoystickEl.addEventListener('touchend', endDegreeTouch, { passive: false });
   degreeJoystickEl.addEventListener('touchcancel', endDegreeTouch, { passive: false });
 
-  // The degree joystick's center circle is a dead zone for the same reason
-  // the modifier joystick's was (flush inner radius against the wedges, no
-  // pointer-events to catch the hover) — no action needed there since there's
-  // no "center chord" to play, but give it a hover so nothing looks stuck.
-  degreeCenterCircle.addEventListener('mouseenter', () => {});
-
   function updateDegreeCenterLabel() {
     const heldKeys = Array.from(heldDegrees.keys());
     if (heldKeys.length === 1) {
@@ -656,7 +654,15 @@
     setDirection(dir);
     joyWedges.forEach(w => w.classList.toggle('active', w.dataset.dir === dir));
     joyLabels.forEach(l => l.classList.toggle('active', l.dataset.dir === dir));
+    refreshLabels();
+  }
+
+  // Refresh every held-state-dependent text label at once. Called from any
+  // action that changes what's held or the joystick direction.
+  function refreshLabels() {
     updateJoyCenterLabel();
+    updateUpWedgeLabel();
+    updateDegreeCenterLabel();
   }
 
   function soleHeldQuality() {
