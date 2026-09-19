@@ -713,9 +713,17 @@
   fullscreenBtn.addEventListener('click', () => {
     if (!isFullscreen()) {
       const el = document.documentElement;
-      (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
+      const request = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (!request) return;
+      Promise.resolve(request.call(el)).catch(err => {
+        console.error('Fullscreen request failed:', err);
+      });
     } else {
-      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (!exit) return;
+      Promise.resolve(exit.call(document)).catch(err => {
+        console.error('Exit fullscreen failed:', err);
+      });
     }
   });
 
