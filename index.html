@@ -487,16 +487,65 @@
     });
   }
 
-  // mouse/touch interaction on the degree joystick wedges: hovering a wedge
-  // plays that chord, moving off stops it (touch has no hover concept, so it
-  // still uses press/release on the wedge itself)
+  // mouse interaction on the degree joystick wedges: hovering a wedge plays
+  // that chord, moving off stops it
   DEGREES.forEach(d => {
     d.wedgeEl.addEventListener('mouseenter', () => pressDegree(d));
     d.wedgeEl.addEventListener('mouseleave', () => releaseDegree(d));
-    d.wedgeEl.addEventListener('touchstart', (e) => { e.preventDefault(); pressDegree(d); }, { passive: false });
-    d.wedgeEl.addEventListener('touchend', (e) => { e.preventDefault(); releaseDegree(d); }, { passive: false });
-    d.wedgeEl.addEventListener('touchcancel', (e) => { e.preventDefault(); releaseDegree(d); }, { passive: false });
   });
+
+  // Touch interaction, supporting multiple simultaneous fingers: each active
+  // touch is tracked by its identifier -> currently-held degree, so two (or
+  // more) fingers can each hold a different chord at once, and a finger can
+  // slide between wedges (still touching down) to switch chords without
+  // lifting, matching how a real analog-stick pad would behave.
+  const touchedDegrees = new Map(); // touch identifier -> degree key
+
+  function degreeAtPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    const key = el.dataset && el.dataset.key;
+    return key ? degreeByKey.get(key) : null;
+  }
+
+  degreeJoystickEl.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    Array.from(e.changedTouches).forEach(touch => {
+      const d = degreeAtPoint(touch.clientX, touch.clientY);
+      if (!d) return;
+      touchedDegrees.set(touch.identifier, d.key);
+      pressDegree(d);
+    });
+  }, { passive: false });
+
+  degreeJoystickEl.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    Array.from(e.changedTouches).forEach(touch => {
+      const currentKey = touchedDegrees.get(touch.identifier);
+      const d = degreeAtPoint(touch.clientX, touch.clientY);
+      const newKey = d ? d.key : null;
+      if (newKey === currentKey) return;
+      if (currentKey) releaseDegree(degreeByKey.get(currentKey));
+      if (d) {
+        pressDegree(d);
+        touchedDegrees.set(touch.identifier, d.key);
+      } else {
+        touchedDegrees.delete(touch.identifier);
+      }
+    });
+  }, { passive: false });
+
+  function endDegreeTouch(e) {
+    e.preventDefault();
+    Array.from(e.changedTouches).forEach(touch => {
+      const key = touchedDegrees.get(touch.identifier);
+      if (!key) return;
+      releaseDegree(degreeByKey.get(key));
+      touchedDegrees.delete(touch.identifier);
+    });
+  }
+  degreeJoystickEl.addEventListener('touchend', endDegreeTouch, { passive: false });
+  degreeJoystickEl.addEventListener('touchcancel', endDegreeTouch, { passive: false });
 
   // The degree joystick's center circle is a dead zone for the same reason
   // the modifier joystick's was (flush inner radius against the wedges, no
@@ -590,6 +639,48 @@
   joyCenterCircle.addEventListener('mouseenter', () => setJoyDirection('center'));
 
   joystickEl.addEventListener('mouseleave', () => setJoyDirection('center'));
+
+  // Touch support for the modifier joystick: since there's only one global
+  // currentDirection (this stick isn't per-finger like the degree stick),
+  // the first touch to land on it "owns" the drag until it lifts, so it
+  // behaves like a real analog stick under one thumb while the other thumb
+  // independently holds a degree wedge on the other joystick.
+  let modifierTouchId = null;
+
+  function directionAtPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    if (el.classList.contains('joy-wedge')) return el.dataset.dir;
+    if (el.classList.contains('joy-center') && el === joyCenterCircle) return 'center';
+    return null;
+  }
+
+  joystickEl.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (modifierTouchId !== null) return;
+    const touch = e.changedTouches[0];
+    modifierTouchId = touch.identifier;
+    const dir = directionAtPoint(touch.clientX, touch.clientY);
+    if (dir) setJoyDirection(dir);
+  }, { passive: false });
+
+  joystickEl.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = Array.from(e.changedTouches).find(t => t.identifier === modifierTouchId);
+    if (!touch) return;
+    const dir = directionAtPoint(touch.clientX, touch.clientY);
+    setJoyDirection(dir || 'center');
+  }, { passive: false });
+
+  function endModifierTouch(e) {
+    const touch = Array.from(e.changedTouches).find(t => t.identifier === modifierTouchId);
+    if (!touch) return;
+    e.preventDefault();
+    modifierTouchId = null;
+    setJoyDirection('center');
+  }
+  joystickEl.addEventListener('touchend', endModifierTouch, { passive: false });
+  joystickEl.addEventListener('touchcancel', endModifierTouch, { passive: false });
 </script>
 </body>
 </html>
