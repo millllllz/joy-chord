@@ -245,7 +245,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v7</div>
+  <div class="build-version">v8</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -283,7 +283,7 @@
         <text class="joy-label" data-dir="down-right" x="165.2" y="165.2" text-anchor="middle">9th</text>
         <text class="joy-label" data-dir="down" x="110.0" y="188.0" text-anchor="middle">Sus4</text>
         <text class="joy-label" data-dir="down-left" id="joy-label-down-left" x="54.8" y="165.2" text-anchor="middle">6th/Sus2</text>
-        <text class="joy-label" data-dir="left" x="32.0" y="110.0" text-anchor="middle">Dim</text>
+        <text class="joy-label" data-dir="left" id="joy-label-left" x="32.0" y="110.0" text-anchor="middle">Dim/Min</text>
         <text class="joy-label" data-dir="up-left" x="54.8" y="54.8" text-anchor="middle">Aug</text>
 
         <circle class="joy-center" cx="110" cy="110" r="40" />
@@ -408,8 +408,10 @@
         return [root, 5, fifth];
       case 'down-left':     // add6, or sus2 if the triad has no major 3rd
         return quality === 'major' ? [root, third, fifth, 9] : [root, 2, fifth];
-      case 'left':          // darken: always resolves to diminished, regardless of starting quality
-        return BASE_TRIAD.diminished;
+      case 'left':          // darken: major/minor -> diminished; diminished -> minor
+        // (the only way to reach a plain minor triad on a naturally-diminished
+        // root like vii°, since nothing else produces it)
+        return quality === 'diminished' ? BASE_TRIAD.minor : BASE_TRIAD.diminished;
       case 'up-left':       // augmented: raise the 5th
         return [root, third, fifth + 1];
       default:
@@ -419,11 +421,9 @@
 
   // Fixed labels for directions whose effect doesn't depend on the held
   // chord's quality. Directions that DO depend on quality (up, right,
-  // down-left) are handled dynamically by QUALITY_LABELS below. 'left' always
-  // resolves to diminished regardless of quality, so it's fixed too.
+  // down-left, left) are handled dynamically by QUALITY_LABELS/leftLabel below.
   const CHORD_LABELS = {
     center: null, 'up-right': 'Dom7', 'down-right': '9th', down: 'Sus4', 'up-left': 'Aug',
-    left: 'Dim',
   };
 
   // Per the HiChord manual's default joystick mode, these directions change
@@ -432,12 +432,20 @@
   //   up:         major -> minor / minor,diminished -> major
   //   right:      major -> Maj7  / minor -> min7
   //   down-left:  major -> 6th   / minor -> Sus2
+  // 'left' is also quality-dependent but doesn't fit the major/other 2-way
+  // shape above (it's a 3-way split: major/minor -> Dim, diminished -> Min —
+  // the only way to reach a plain minor triad on a naturally-diminished root
+  // like vii°), so it's listed here as a member but handled specially below.
   const QUALITY_LABELS = {
     up:         { major: 'min', other: 'maj' },
     right:      { major: 'Maj7', other: 'min7' },
     'down-left': { major: '6th', other: 'Sus2' },
+    left:       true,
   };
   function qualityLabel(direction, quality) {
+    if (direction === 'left') {
+      return quality === 'diminished' ? 'Min' : 'Dim';
+    }
     const labels = QUALITY_LABELS[direction];
     return quality === 'major' ? labels.major : labels.other;
   }
@@ -707,17 +715,18 @@
     joyCenterEl.textContent = quality ? (quality === 'diminished' ? 'dim' : quality) : '';
   }
 
-  // The up/right/down-left wedges each do something different depending on
-  // the held chord's quality (see QUALITY_LABELS), so their displayed label
-  // tracks that outcome instead of showing a static generic word — makes it
-  // clear what pushing that direction will actually do right now.
+  // The up/right/down-left/left wedges each do something different depending
+  // on the held chord's quality (see QUALITY_LABELS), so their displayed
+  // label tracks that outcome instead of showing a static generic word —
+  // makes it clear what pushing that direction will actually do right now.
   const qualityWedgeLabels = {
     up: document.getElementById('joy-label-up'),
     right: document.getElementById('joy-label-right'),
     'down-left': document.getElementById('joy-label-down-left'),
+    left: document.getElementById('joy-label-left'),
   };
   const QUALITY_WEDGE_DEFAULTS = {
-    up: 'Maj/Min', right: 'Maj7/min7', 'down-left': '6th/Sus2',
+    up: 'Maj/Min', right: 'Maj7/min7', 'down-left': '6th/Sus2', left: 'Dim/Min',
   };
   function updateQualityWedgeLabels() {
     const quality = soleHeldQuality();
