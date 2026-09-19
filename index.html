@@ -96,7 +96,7 @@
     display: flex;
     margin: 36px 0 8px;
     height: 160px;
-    width: 336px;
+    width: 672px;
   }
   .key {
     position: relative;
@@ -113,6 +113,10 @@
     font-weight: 600;
     letter-spacing: 0.03em;
   }
+  .key.display-only {
+    cursor: default;
+    opacity: 0.55;
+  }
   .key.white {
     position: relative;
     width: 48px;
@@ -125,6 +129,10 @@
   .key.white.active {
     background: linear-gradient(180deg, var(--accent), #4fcfaa);
     color: #10221c;
+  }
+  .key.white.ghost {
+    background: linear-gradient(180deg, #bdeee0, #a6e6d4);
+    color: #1c3830;
   }
   .key.black {
     position: absolute;
@@ -141,6 +149,10 @@
   .key.black.active {
     background: linear-gradient(180deg, var(--accent-active), #2aa886);
     color: #062015;
+  }
+  .key.black.ghost {
+    background: linear-gradient(180deg, #2f6656, #1a3a30);
+    color: #cdeee2;
   }
 </style>
 </head>
@@ -233,23 +245,44 @@
 
   const FREQ_C4 = 261.63;
 
-  // --- single-octave keyboard: 'a' = middle C (C4), 'w' = C#4 ---
-  // Standard piano-style row mapping.
-  const NOTE_MAP = [
-    { key: 'a', note: 'C4',  semitone: 0,  type: 'white' },
-    { key: 'w', note: 'C#4', semitone: 1,  type: 'black' },
-    { key: 's', note: 'D4',  semitone: 2,  type: 'white' },
-    { key: 'e', note: 'D#4', semitone: 3,  type: 'black' },
-    { key: 'd', note: 'E4',  semitone: 4,  type: 'white' },
-    { key: 'f', note: 'F4',  semitone: 5,  type: 'white' },
-    { key: 't', note: 'F#4', semitone: 6,  type: 'black' },
-    { key: 'g', note: 'G4',  semitone: 7,  type: 'white' },
-    { key: 'y', note: 'G#4', semitone: 8,  type: 'black' },
-    { key: 'h', note: 'A4',  semitone: 9,  type: 'white' },
-    { key: 'u', note: 'A#4', semitone: 10, type: 'black' },
-    { key: 'j', note: 'B4',  semitone: 11, type: 'white' },
-    { key: 'k', note: 'C5',  semitone: 12, type: 'white' },
+  // --- keyboard display: 2 octaves, C4-C6. Only the lower octave (C4-C5) is
+  // interactive (mouse/touch/computer-keyboard); the upper octave is a
+  // visual-only display used to show ghost notes for chord tones that fall
+  // outside the playable octave (e.g. a 9th, which is +14 semitones). ---
+  // 'a' = middle C (C4), 'w' = C#4. Standard piano-style row mapping.
+  const OCTAVE_PATTERN = [
+    { name: 'C',  semitone: 0,  type: 'white' },
+    { name: 'C#', semitone: 1,  type: 'black' },
+    { name: 'D',  semitone: 2,  type: 'white' },
+    { name: 'D#', semitone: 3,  type: 'black' },
+    { name: 'E',  semitone: 4,  type: 'white' },
+    { name: 'F',  semitone: 5,  type: 'white' },
+    { name: 'F#', semitone: 6,  type: 'black' },
+    { name: 'G',  semitone: 7,  type: 'white' },
+    { name: 'G#', semitone: 8,  type: 'black' },
+    { name: 'A',  semitone: 9,  type: 'white' },
+    { name: 'A#', semitone: 10, type: 'black' },
+    { name: 'B',  semitone: 11, type: 'white' },
   ];
+
+  // 'a'-'k' plus sharps play C4-C5. Everything above C5 is a visual-only
+  // display octave used to show ghost notes for chord tones that fall
+  // outside the playable range (e.g. a 9th, which is +14 semitones).
+  const LOWER_OCTAVE_KEYS = ['a', 'w', 's', 'e', 'd', 'f', 't', 'g', 'y', 'h', 'u', 'j', 'k'];
+
+  // 25 keys spanning C4-C6 (2 octaves), built from the repeating chromatic pattern.
+  const NOTE_MAP = [];
+  for (let semitone = 0; semitone <= 24; semitone++) {
+    const p = OCTAVE_PATTERN[semitone % 12];
+    const octave = 4 + Math.floor(semitone / 12);
+    NOTE_MAP.push({
+      key: semitone <= 12 ? LOWER_OCTAVE_KEYS[semitone] : null,
+      note: `${p.name}${octave}`,
+      semitone,
+      type: p.type,
+      interactive: semitone <= 12,
+    });
+  }
 
   function noteFreq(semitonesFromC4) {
     return FREQ_C4 * Math.pow(2, semitonesFromC4 / 12);
@@ -285,29 +318,47 @@
   const blackKeys = NOTE_MAP.filter(n => n.type === 'black');
   const WHITE_KEY_WIDTH = 48;
 
-  whiteKeys.forEach(n => {
+  whiteKeys.forEach((n, i) => {
     const el = document.createElement('div');
-    el.className = 'key white';
-    el.dataset.key = n.key;
-    el.textContent = n.key;
+    el.className = 'key white' + (n.interactive ? '' : ' display-only');
+    if (n.key) el.dataset.key = n.key;
+    el.textContent = n.key || '';
+    keyboardEl.appendChild(el);
+    n.el = el;
+    n.whiteIndex = i;
+  });
+
+  // black key horizontal offsets, indexed by which white key they sit before
+  blackKeys.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'key black' + (n.interactive ? '' : ' display-only');
+    if (n.key) el.dataset.key = n.key;
+    el.textContent = n.key || '';
+    // the white key immediately following this black key in NOTE_MAP order
+    const followingWhiteIndex = whiteKeys.findIndex(w => w.semitone === n.semitone + 1);
+    el.style.left = `${followingWhiteIndex * WHITE_KEY_WIDTH - 15}px`;
     keyboardEl.appendChild(el);
     n.el = el;
   });
 
-  // black key horizontal offsets, indexed by which white key they sit between
-  const blackOffsetByNote = {
-    'C#4': 1, 'D#4': 2, 'F#4': 4, 'G#4': 5, 'A#4': 6,
-  };
-  blackKeys.forEach(n => {
-    const el = document.createElement('div');
-    el.className = 'key black';
-    el.dataset.key = n.key;
-    el.textContent = n.key;
-    const whiteIndex = blackOffsetByNote[n.note];
-    el.style.left = `${whiteIndex * WHITE_KEY_WIDTH - 15}px`;
-    keyboardEl.appendChild(el);
-    n.el = el;
-  });
+  // Recomputes which displayed keys should show the "ghost" highlight: any
+  // key (in either octave) whose pitch class matches a currently-sounding
+  // chord tone that isn't itself the physically-pressed root.
+  function refreshGhostNotes() {
+    const soundingClasses = new Set();
+    heldKeys.forEach((chord, key) => {
+      const n = keyByChar.get(key);
+      CHORD_INTERVALS[chord].forEach(interval => {
+        if (interval === 0) return; // root is shown via 'active', not ghost
+        soundingClasses.add((n.semitone + interval) % 12);
+      });
+    });
+
+    NOTE_MAP.forEach(n => {
+      const isGhost = !n.el.classList.contains('active') && soundingClasses.has(n.semitone % 12);
+      n.el.classList.toggle('ghost', isGhost);
+    });
+  }
 
   function pressNote(n) {
     if (heldKeys.has(n.key)) return;
@@ -316,6 +367,7 @@
       startVoice(`${n.key}:${interval}`, noteFreq(n.semitone + interval));
     });
     n.el.classList.add('active');
+    refreshGhostNotes();
   }
 
   function releaseNote(n) {
@@ -326,6 +378,7 @@
       stopVoice(`${n.key}:${interval}`);
     });
     n.el.classList.remove('active');
+    refreshGhostNotes();
   }
 
   function setChord(chord) {
@@ -344,10 +397,12 @@
         heldKeys.set(key, chord);
       }
     });
+    refreshGhostNotes();
   }
 
-  // mouse/touch interaction directly on keyboard keys
-  NOTE_MAP.forEach(n => {
+  // mouse/touch interaction directly on keyboard keys (playable octave only;
+  // the upper display octave is visual-only and shows ghost notes)
+  NOTE_MAP.filter(n => n.interactive).forEach(n => {
     n.el.addEventListener('mousedown', () => pressNote(n));
     n.el.addEventListener('mouseup', () => releaseNote(n));
     n.el.addEventListener('mouseleave', () => releaseNote(n));
