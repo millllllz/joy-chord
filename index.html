@@ -91,68 +91,50 @@
     pointer-events: none;
   }
 
-  .keyboard {
-    position: relative;
+  .chord-buttons {
     display: flex;
+    gap: 10px;
     margin: 36px 0 8px;
-    height: 160px;
-    width: 672px;
+    justify-content: center;
   }
-  .key {
-    position: relative;
-    border: 1px solid #0c0d0f;
-    border-radius: 0 0 6px 6px;
+  .chord-btn {
+    width: 64px;
+    height: 88px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(180deg, #2a2e35, #1a1c20);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.06);
+    color: var(--text);
     cursor: pointer;
     user-select: none;
     -webkit-user-select: none;
     display: flex;
-    align-items: flex-end;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    padding-bottom: 10px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
+    gap: 6px;
+    font-family: inherit;
+    transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease;
   }
-  .key.display-only {
-    cursor: default;
-    opacity: 0.55;
+  .chord-btn .degree {
+    font-size: 18px;
+    font-weight: 700;
   }
-  .key.white {
-    position: relative;
-    width: 48px;
-    height: 160px;
-    background: linear-gradient(180deg, #f4f4f4, #e2e2e2);
-    color: #666;
-    box-shadow: inset 0 -3px 4px rgba(0,0,0,0.08);
-    z-index: 1;
+  .chord-btn .quality {
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
-  .key.white.active {
-    background: linear-gradient(180deg, var(--accent), #4fcfaa);
-    color: #10221c;
+  .chord-btn:active,
+  .chord-btn.active {
+    transform: scale(0.96);
+    background: linear-gradient(180deg, var(--accent), #3fd8ac);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4), inset 0 2px 4px rgba(0,0,0,0.3), 0 0 18px rgba(110,231,201,0.35);
+    color: #0d1f19;
   }
-  .key.white.ghost {
-    background: linear-gradient(180deg, #bdeee0, #a6e6d4);
-    color: #1c3830;
-  }
-  .key.black {
-    position: absolute;
-    top: 0;
-    width: 30px;
-    height: 98px;
-    background: linear-gradient(180deg, #333, #0f0f0f);
-    color: #999;
-    border-radius: 0 0 4px 4px;
-    z-index: 2;
-    padding-bottom: 8px;
-    font-size: 10px;
-  }
-  .key.black.active {
-    background: linear-gradient(180deg, var(--accent-active), #2aa886);
-    color: #062015;
-  }
-  .key.black.ghost {
-    background: linear-gradient(180deg, #2f6656, #1a3a30);
-    color: #cdeee2;
+  .chord-btn.active .quality {
+    color: #143d31;
   }
 </style>
 </head>
@@ -188,10 +170,10 @@
       <text class="joy-label" data-dir="up-left" x="54.8" y="54.8" text-anchor="middle">aug</text>
 
       <circle class="joy-center" cx="110" cy="110" r="40" />
-      <text class="joy-center-label" id="joy-center" x="110" y="110">maj</text>
+      <text class="joy-center-label" id="joy-center" x="110" y="110"></text>
     </svg>
 
-    <div class="keyboard" id="keyboard"></div>
+    <div class="chord-buttons" id="chord-buttons"></div>
   </div>
 
 <script>
@@ -245,197 +227,152 @@
 
   const FREQ_C4 = 261.63;
 
-  // --- keyboard display: 2 octaves, C4-C6. Only the lower octave (C4-C5) is
-  // interactive (mouse/touch/computer-keyboard); the upper octave is a
-  // visual-only display used to show ghost notes for chord tones that fall
-  // outside the playable octave (e.g. a 9th, which is +14 semitones). ---
-  // 'a' = middle C (C4), 'w' = C#4. Standard piano-style row mapping.
-  const OCTAVE_PATTERN = [
-    { name: 'C',  semitone: 0,  type: 'white' },
-    { name: 'C#', semitone: 1,  type: 'black' },
-    { name: 'D',  semitone: 2,  type: 'white' },
-    { name: 'D#', semitone: 3,  type: 'black' },
-    { name: 'E',  semitone: 4,  type: 'white' },
-    { name: 'F',  semitone: 5,  type: 'white' },
-    { name: 'F#', semitone: 6,  type: 'black' },
-    { name: 'G',  semitone: 7,  type: 'white' },
-    { name: 'G#', semitone: 8,  type: 'black' },
-    { name: 'A',  semitone: 9,  type: 'white' },
-    { name: 'A#', semitone: 10, type: 'black' },
-    { name: 'B',  semitone: 11, type: 'white' },
-  ];
-
-  // 'a'-'k' plus sharps play C4-C5. Everything above C5 is a visual-only
-  // display octave used to show ghost notes for chord tones that fall
-  // outside the playable range (e.g. a 9th, which is +14 semitones).
-  const LOWER_OCTAVE_KEYS = ['a', 'w', 's', 'e', 'd', 'f', 't', 'g', 'y', 'h', 'u', 'j', 'k'];
-
-  // 25 keys spanning C4-C6 (2 octaves), built from the repeating chromatic pattern.
-  const NOTE_MAP = [];
-  for (let semitone = 0; semitone <= 24; semitone++) {
-    const p = OCTAVE_PATTERN[semitone % 12];
-    const octave = 4 + Math.floor(semitone / 12);
-    NOTE_MAP.push({
-      key: semitone <= 12 ? LOWER_OCTAVE_KEYS[semitone] : null,
-      note: `${p.name}${octave}`,
-      semitone,
-      type: p.type,
-      interactive: semitone <= 12,
-    });
-  }
-
   function noteFreq(semitonesFromC4) {
     return FREQ_C4 * Math.pow(2, semitonesFromC4 / 12);
   }
 
-  // Chord voicings in semitones from the root, keyed by joystick direction.
-  // Center (no deflection) is a plain major triad. Each direction applies the
-  // modification HiChord's default joystick mode documents, from a major base.
-  const CHORD_INTERVALS = {
-    center:     [0, 4, 7],        // major
-    'up':       [0, 3, 7],        // maj/min toggle -> minor (lowered 3rd)
-    'up-right': [0, 4, 7, 10],    // dominant 7th (flattened 7th)
-    'right':    [0, 4, 7, 11],    // major 7th (natural 7th)
-    'down-right': [0, 4, 7, 14],  // add9
-    'down':     [0, 5, 7],        // sus4
-    'down-left': [0, 4, 7, 9],    // add6
-    'left':     [0, 3, 6],        // diminished (darkened)
-    'up-left':  [0, 4, 8],        // augmented (raised 5th)
+  // --- 7 diatonic chord buttons (key of C major) ---
+  // Each button is a scale degree with its own natural triad quality, per
+  // the HiChord manual's chord system: I ii iii IV V vi vii°.
+  const DEGREES = [
+    { degree: 'I',    key: '1', semitone: 0,  quality: 'major' },
+    { degree: 'ii',   key: '2', semitone: 2,  quality: 'minor' },
+    { degree: 'iii',  key: '3', semitone: 4,  quality: 'minor' },
+    { degree: 'IV',   key: '4', semitone: 5,  quality: 'major' },
+    { degree: 'V',    key: '5', semitone: 7,  quality: 'major' },
+    { degree: 'vi',   key: '6', semitone: 9,  quality: 'minor' },
+    { degree: 'vii°', key: '7', semitone: 11, quality: 'diminished' },
+  ];
+
+  // Natural triad intervals for each base quality.
+  const BASE_TRIAD = {
+    major: [0, 4, 7],
+    minor: [0, 3, 7],
+    diminished: [0, 3, 6],
   };
+
+  // Joystick modification, applied relative to a button's own natural triad
+  // quality (not always a major base). 'third'/'fifth' are computed from the
+  // held button's BASE_TRIAD so e.g. holding a minor button and pushing
+  // 'right' (7th) yields a minor 7th, not a major 7th.
+  function getChordIntervals(quality, direction) {
+    const [root, third, fifth] = BASE_TRIAD[quality];
+    switch (direction) {
+      case 'center':       return [root, third, fifth];
+      case 'up':            // maj/min toggle
+        return quality === 'major' ? BASE_TRIAD.minor : BASE_TRIAD.major;
+      case 'up-right':      // dominant 7th (flattened 7th)
+        return [root, third, fifth, 10];
+      case 'right':         // natural 7th (major or minor, matching quality)
+        return [root, third, fifth, quality === 'major' ? 11 : 10];
+      case 'down-right':    // add9
+        return [root, third, fifth, 14];
+      case 'down':          // sus4
+        return [root, 5, fifth];
+      case 'down-left':     // add6, or sus2 if the triad has no major 3rd
+        return quality === 'major' ? [root, third, fifth, 9] : [root, 2, fifth];
+      case 'left':          // darken: flatten the 5th
+        return [root, third, fifth - 1];
+      case 'up-left':       // augmented: raise the 5th
+        return [root, third, fifth + 1];
+      default:
+        return [root, third, fifth];
+    }
+  }
+
   const CHORD_LABELS = {
-    center: 'maj', up: 'min', 'up-right': 'dom7', right: 'maj7',
-    'down-right': 'add9', down: 'sus4', 'down-left': 'add6',
-    left: 'dim', 'up-left': 'aug',
+    center: null, up: 'maj/min', 'up-right': 'dom7', right: '7th',
+    'down-right': 'add9', down: 'sus4', 'down-left': '6/sus2',
+    left: 'dark', 'up-left': 'aug',
   };
-  let currentChord = 'center';
+  let currentDirection = 'center';
 
-  const keyByChar = new Map(NOTE_MAP.map(n => [n.key, n]));
-  const heldKeys = new Map(); // key -> chord type used when pressed
+  const degreeByKey = new Map(DEGREES.map(d => [d.key, d]));
+  const heldDegrees = new Map(); // degree key -> direction used when pressed
 
-  // --- render keyboard UI ---
-  const keyboardEl = document.getElementById('keyboard');
-  const whiteKeys = NOTE_MAP.filter(n => n.type === 'white');
-  const blackKeys = NOTE_MAP.filter(n => n.type === 'black');
-  const WHITE_KEY_WIDTH = 48;
-
-  whiteKeys.forEach((n, i) => {
-    const el = document.createElement('div');
-    el.className = 'key white' + (n.interactive ? '' : ' display-only');
-    if (n.key) el.dataset.key = n.key;
-    el.textContent = n.key || '';
-    keyboardEl.appendChild(el);
-    n.el = el;
-    n.whiteIndex = i;
+  // --- render the 7 chord buttons ---
+  const buttonsEl = document.getElementById('chord-buttons');
+  DEGREES.forEach(d => {
+    const el = document.createElement('button');
+    el.className = 'chord-btn';
+    el.dataset.key = d.key;
+    el.innerHTML = `<span class="degree">${d.degree}</span><span class="quality">${d.quality === 'diminished' ? 'dim' : d.quality}</span>`;
+    buttonsEl.appendChild(el);
+    d.el = el;
   });
 
-  // black key horizontal offsets, indexed by which white key they sit before
-  blackKeys.forEach(n => {
-    const el = document.createElement('div');
-    el.className = 'key black' + (n.interactive ? '' : ' display-only');
-    if (n.key) el.dataset.key = n.key;
-    el.textContent = n.key || '';
-    // the white key immediately following this black key in NOTE_MAP order
-    const followingWhiteIndex = whiteKeys.findIndex(w => w.semitone === n.semitone + 1);
-    el.style.left = `${followingWhiteIndex * WHITE_KEY_WIDTH - 15}px`;
-    keyboardEl.appendChild(el);
-    n.el = el;
-  });
-
-  // Recomputes which displayed keys should show the "ghost" highlight: the
-  // exact key each currently-sounding chord tone actually lands on (root +
-  // interval, not wrapped to every octave), excluding the pressed root itself.
-  function refreshGhostNotes() {
-    const soundingSemitones = new Set();
-    heldKeys.forEach((chord, key) => {
-      const n = keyByChar.get(key);
-      CHORD_INTERVALS[chord].forEach(interval => {
-        if (interval === 0) return; // root is shown via 'active', not ghost
-        soundingSemitones.add(n.semitone + interval);
-      });
+  function pressDegree(d) {
+    if (heldDegrees.has(d.key)) return;
+    heldDegrees.set(d.key, currentDirection);
+    getChordIntervals(d.quality, currentDirection).forEach(interval => {
+      startVoice(`${d.key}:${interval}`, noteFreq(d.semitone + interval));
     });
-
-    NOTE_MAP.forEach(n => {
-      const isGhost = !n.el.classList.contains('active') && soundingSemitones.has(n.semitone);
-      n.el.classList.toggle('ghost', isGhost);
-    });
+    d.el.classList.add('active');
   }
 
-  function pressNote(n) {
-    if (heldKeys.has(n.key)) return;
-    heldKeys.set(n.key, currentChord);
-    CHORD_INTERVALS[currentChord].forEach(interval => {
-      startVoice(`${n.key}:${interval}`, noteFreq(n.semitone + interval));
+  function releaseDegree(d) {
+    if (!heldDegrees.has(d.key)) return;
+    const direction = heldDegrees.get(d.key);
+    heldDegrees.delete(d.key);
+    getChordIntervals(d.quality, direction).forEach(interval => {
+      stopVoice(`${d.key}:${interval}`);
     });
-    n.el.classList.add('active');
-    refreshGhostNotes();
+    d.el.classList.remove('active');
   }
 
-  function releaseNote(n) {
-    if (!heldKeys.has(n.key)) return;
-    const chord = heldKeys.get(n.key);
-    heldKeys.delete(n.key);
-    CHORD_INTERVALS[chord].forEach(interval => {
-      stopVoice(`${n.key}:${interval}`);
-    });
-    n.el.classList.remove('active');
-    refreshGhostNotes();
-  }
+  function setDirection(direction) {
+    if (direction === currentDirection) return;
+    const previousDirection = currentDirection;
+    currentDirection = direction;
 
-  function setChord(chord) {
-    if (chord === currentChord) return;
-    const previousChord = currentChord;
-    currentChord = chord;
-
-    // live-retune any keys currently held: swap out old interval voices for the new chord
-    heldKeys.forEach((heldChord, key) => {
-      if (heldChord === previousChord) {
-        CHORD_INTERVALS[previousChord].forEach(interval => stopVoice(`${key}:${interval}`));
-        const n = keyByChar.get(key);
-        CHORD_INTERVALS[chord].forEach(interval => {
-          startVoice(`${key}:${interval}`, noteFreq(n.semitone + interval));
+    // live-retune any buttons currently held: swap out old interval voices for the new direction
+    heldDegrees.forEach((heldDirection, key) => {
+      if (heldDirection === previousDirection) {
+        const d = degreeByKey.get(key);
+        getChordIntervals(d.quality, previousDirection).forEach(interval => stopVoice(`${key}:${interval}`));
+        getChordIntervals(d.quality, direction).forEach(interval => {
+          startVoice(`${key}:${interval}`, noteFreq(d.semitone + interval));
         });
-        heldKeys.set(key, chord);
+        heldDegrees.set(key, direction);
       }
     });
-    refreshGhostNotes();
   }
 
-  // mouse/touch interaction directly on keyboard keys (playable octave only;
-  // the upper display octave is visual-only and shows ghost notes)
-  NOTE_MAP.filter(n => n.interactive).forEach(n => {
-    n.el.addEventListener('mousedown', () => pressNote(n));
-    n.el.addEventListener('mouseup', () => releaseNote(n));
-    n.el.addEventListener('mouseleave', () => releaseNote(n));
-    n.el.addEventListener('touchstart', (e) => { e.preventDefault(); pressNote(n); }, { passive: false });
-    n.el.addEventListener('touchend', (e) => { e.preventDefault(); releaseNote(n); }, { passive: false });
-    n.el.addEventListener('touchcancel', (e) => { e.preventDefault(); releaseNote(n); }, { passive: false });
+  // mouse/touch interaction on the chord buttons
+  DEGREES.forEach(d => {
+    d.el.addEventListener('mousedown', () => pressDegree(d));
+    d.el.addEventListener('mouseup', () => releaseDegree(d));
+    d.el.addEventListener('mouseleave', () => releaseDegree(d));
+    d.el.addEventListener('touchstart', (e) => { e.preventDefault(); pressDegree(d); }, { passive: false });
+    d.el.addEventListener('touchend', (e) => { e.preventDefault(); releaseDegree(d); }, { passive: false });
+    d.el.addEventListener('touchcancel', (e) => { e.preventDefault(); releaseDegree(d); }, { passive: false });
   });
 
-  // physical computer-keyboard interaction
+  // physical computer-keyboard interaction: number keys 1-7
   window.addEventListener('keydown', (e) => {
     if (e.repeat) return;
-    const n = keyByChar.get(e.key.toLowerCase());
-    if (!n) return;
-    pressNote(n);
+    const d = degreeByKey.get(e.key);
+    if (!d) return;
+    pressDegree(d);
   });
 
   window.addEventListener('keyup', (e) => {
-    const n = keyByChar.get(e.key.toLowerCase());
-    if (!n) return;
-    releaseNote(n);
+    const d = degreeByKey.get(e.key);
+    if (!d) return;
+    releaseDegree(d);
   });
 
-  // --- joystick: hover a wedge to modify the chord; leaving the pad snaps back to major ---
+  // --- joystick: hover a wedge to modify the held chord; leaving the pad snaps back to the natural triad ---
   const joystickEl = document.getElementById('joystick');
   const joyCenterEl = document.getElementById('joy-center');
   const joyWedges = document.querySelectorAll('.joy-wedge');
   const joyLabels = document.querySelectorAll('.joy-label');
 
   function setJoyDirection(dir) {
-    setChord(dir);
+    setDirection(dir);
     joyWedges.forEach(w => w.classList.toggle('active', w.dataset.dir === dir));
     joyLabels.forEach(l => l.classList.toggle('active', l.dataset.dir === dir));
-    joyCenterEl.textContent = CHORD_LABELS[dir];
+    joyCenterEl.textContent = CHORD_LABELS[dir] || '';
   }
 
   joyWedges.forEach(wedge => {
