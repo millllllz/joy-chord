@@ -43,32 +43,6 @@
     color: var(--muted);
     font-size: 13px;
   }
-  #tone-btn {
-    width: 160px;
-    height: 160px;
-    border-radius: 50%;
-    border: none;
-    background: linear-gradient(145deg, #2a2e35, #1a1c20);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.06);
-    color: var(--accent);
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: transform 0.06s ease, box-shadow 0.06s ease, color 0.06s ease;
-    user-select: none;
-    -webkit-user-select: none;
-  }
-  #tone-btn:hover {
-    color: var(--accent-active);
-  }
-  #tone-btn:active,
-  #tone-btn.active {
-    transform: scale(0.96);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 2px 4px rgba(0,0,0,0.5), 0 0 24px rgba(110,231,201,0.35);
-  }
-
   .keyboard {
     position: relative;
     display: flex;
@@ -126,7 +100,6 @@
   <div class="synth">
     <h1>Chord</h1>
     <p class="sub">press &amp; hold for tone</p>
-    <button id="tone-btn">Play</button>
 
     <div class="keyboard" id="keyboard"></div>
   </div>
@@ -180,17 +153,7 @@
     voices.delete(id);
   }
 
-  // --- single tone button ---
   const FREQ_C4 = 261.63;
-  const btn = document.getElementById('tone-btn');
-
-  btn.addEventListener('mousedown', () => { startVoice('btn', FREQ_C4); btn.classList.add('active'); });
-  btn.addEventListener('mouseup', () => { stopVoice('btn'); btn.classList.remove('active'); });
-  btn.addEventListener('mouseleave', () => { stopVoice('btn'); btn.classList.remove('active'); });
-
-  btn.addEventListener('touchstart', (e) => { e.preventDefault(); startVoice('btn', FREQ_C4); btn.classList.add('active'); }, { passive: false });
-  btn.addEventListener('touchend', (e) => { e.preventDefault(); stopVoice('btn'); btn.classList.remove('active'); }, { passive: false });
-  btn.addEventListener('touchcancel', (e) => { e.preventDefault(); stopVoice('btn'); btn.classList.remove('active'); }, { passive: false });
 
   // --- single-octave keyboard: 'a' = middle C (C4), 'w' = C#4 ---
   // Standard piano-style row mapping.
