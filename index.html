@@ -383,6 +383,7 @@
       startVoice(`${d.key}:${interval}`, noteFreq(currentKeyRoot + d.semitone + interval));
     });
     d.el.classList.add('active');
+    updateJoyCenterLabel();
   }
 
   function releaseDegree(d) {
@@ -393,6 +394,7 @@
       stopVoice(`${d.key}:${interval}`);
     });
     d.el.classList.remove('active');
+    updateJoyCenterLabel();
   }
 
   function setDirection(direction) {
@@ -464,7 +466,26 @@
     setDirection(dir);
     joyWedges.forEach(w => w.classList.toggle('active', w.dataset.dir === dir));
     joyLabels.forEach(l => l.classList.toggle('active', l.dataset.dir === dir));
-    joyCenterEl.textContent = CHORD_LABELS[dir] || '';
+    updateJoyCenterLabel();
+  }
+
+  // At center, show the natural quality of whatever's currently held (so it's
+  // clear the chord "snapped back" rather than looking blank/stuck); any other
+  // direction shows that modification's label regardless of what's held.
+  function updateJoyCenterLabel() {
+    if (currentDirection !== 'center') {
+      joyCenterEl.textContent = CHORD_LABELS[currentDirection] || '';
+      return;
+    }
+    const heldQualities = new Set(
+      Array.from(heldDegrees.keys()).map(key => degreeByKey.get(key).quality)
+    );
+    if (heldQualities.size === 1) {
+      const [quality] = heldQualities;
+      joyCenterEl.textContent = quality === 'diminished' ? 'dim' : quality;
+    } else {
+      joyCenterEl.textContent = '';
+    }
   }
 
   joyWedges.forEach(wedge => {
