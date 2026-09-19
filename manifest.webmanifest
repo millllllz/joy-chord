@@ -1,7 +1,7 @@
 {
-  "name": "Chord — Web Synth",
-  "short_name": "Chord",
-  "description": "HiChord-inspired dual-joystick chord synthesizer",
+  "name": "JoyChord — Web Synth",
+  "short_name": "JoyChord",
+  "description": "JoyChord — a HiChord-inspired dual-joystick chord synthesizer for the browser.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

@@ -1,6 +1,6 @@
-# Chord — Web Synth
+# JoyChord — Web Synth
 
-Installable PWA HiChord-inspired chord synthesizer. Web Audio API, no build step, no dependencies. App logic lives in one file (`index.html`); `manifest.webmanifest` + `sw.js` + `icons/` make it installable/offline-capable.
+JoyChord is an installable PWA HiChord-inspired chord synthesizer. Web Audio API, no build step, no dependencies. App logic lives in one file (`index.html`); `manifest.webmanifest` + `sw.js` + `icons/` make it installable/offline-capable.
 
 **Live:** https://millllllz.github.io/joy-chord/
 **Repo:** https://github.com/millllllz/joy-chord (public, `master` branch, deploys via GitHub Pages on push)
