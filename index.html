@@ -93,8 +93,14 @@
 
   .chord-buttons {
     display: flex;
+    flex-direction: column;
     gap: 10px;
     margin: 36px 0 8px;
+    align-items: center;
+  }
+  .chord-row {
+    display: flex;
+    gap: 10px;
     justify-content: center;
   }
   .chord-btn {
@@ -290,14 +296,22 @@
   const degreeByKey = new Map(DEGREES.map(d => [d.key, d]));
   const heldDegrees = new Map(); // degree key -> direction used when pressed
 
-  // --- render the 7 chord buttons ---
+  // --- render the 7 chord buttons: even-numbered on a top row of 3, odd on a bottom row of 4 ---
   const buttonsEl = document.getElementById('chord-buttons');
+  const topRowEl = document.createElement('div');
+  topRowEl.className = 'chord-row';
+  const bottomRowEl = document.createElement('div');
+  bottomRowEl.className = 'chord-row';
+  buttonsEl.appendChild(topRowEl);
+  buttonsEl.appendChild(bottomRowEl);
+
   DEGREES.forEach(d => {
     const el = document.createElement('button');
     el.className = 'chord-btn';
     el.dataset.key = d.key;
     el.innerHTML = `<span class="degree">${d.degree}</span><span class="quality">${d.quality === 'diminished' ? 'dim' : d.quality}</span>`;
-    buttonsEl.appendChild(el);
+    const isEven = Number(d.key) % 2 === 0;
+    (isEven ? topRowEl : bottomRowEl).appendChild(el);
     d.el = el;
   });
 
@@ -338,10 +352,10 @@
     });
   }
 
-  // mouse/touch interaction on the chord buttons
+  // mouse/touch interaction on the chord buttons: hovering plays the chord,
+  // moving off stops it (touch has no hover concept, so it still uses press/release)
   DEGREES.forEach(d => {
-    d.el.addEventListener('mousedown', () => pressDegree(d));
-    d.el.addEventListener('mouseup', () => releaseDegree(d));
+    d.el.addEventListener('mouseenter', () => pressDegree(d));
     d.el.addEventListener('mouseleave', () => releaseDegree(d));
     d.el.addEventListener('touchstart', (e) => { e.preventDefault(); pressDegree(d); }, { passive: false });
     d.el.addEventListener('touchend', (e) => { e.preventDefault(); releaseDegree(d); }, { passive: false });
