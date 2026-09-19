@@ -37,32 +37,27 @@
     text-align: center;
     box-sizing: border-box;
   }
-  h1 {
-    margin: 0 0 4px;
-    font-size: clamp(16px, 3vmin, 20px);
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-  p.sub {
-    margin: 0 0 clamp(12px, 3vmin, 32px);
-    color: var(--muted);
-    font-size: clamp(11px, 2vmin, 13px);
-  }
   .joysticks {
     display: flex;
     gap: clamp(8px, 3vmin, 24px);
     justify-content: center;
-    margin: 8px 0 0;
+    margin: 0;
     flex-wrap: wrap;
   }
   .joystick {
-    width: min(38vmin, 42vw);
-    height: min(38vmin, 42vw);
+    width: min(46vmin, 44vw);
+    height: min(46vmin, 44vw);
     max-width: 320px;
     max-height: 320px;
     flex-shrink: 0;
     user-select: none;
     -webkit-user-select: none;
+  }
+  @media (max-width: 640px) {
+    .joystick {
+      width: min(60vmin, 44vw);
+      height: min(60vmin, 44vw);
+    }
   }
   .joy-wedge {
     cursor: pointer;
@@ -156,42 +151,26 @@
     text-transform: lowercase;
   }
 
-  .key-selector {
-    display: flex;
-    gap: 4px;
-    margin: 28px 0 0;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  .key-btn {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
+  .key-select {
+    margin: clamp(16px, 3vmin, 28px) 0 0;
+    padding: 8px 14px;
+    border-radius: 10px;
     border: none;
     background: #22252a;
-    color: var(--muted);
-    font-size: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background 0.1s ease, color 0.1s ease;
-  }
-  .key-btn:hover {
-    background: #2c3038;
     color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
   }
-  .key-btn.active {
-    background: var(--accent);
-    color: #0d1f19;
+  .key-select:hover {
+    background: #2c3038;
   }
 
 </style>
 </head>
 <body>
   <div class="synth">
-    <h1>Chord</h1>
-    <p class="sub">press &amp; hold for tone</p>
-
     <div class="joysticks">
       <svg class="joystick" id="degree-joystick" viewBox="0 0 220 220">
         <defs>
@@ -233,7 +212,7 @@
       </svg>
     </div>
 
-    <div class="key-selector" id="key-selector"></div>
+    <select class="key-select" id="key-select"></select>
   </div>
 
 <script>
@@ -410,18 +389,17 @@
   const degreeCenterLabel = svgEl('text', { class: 'joy-center-label', x: 110, y: 110 });
   degreeJoystickEl.appendChild(degreeCenterLabel);
 
-  // --- render the 12-key key selector ---
-  const keySelectorEl = document.getElementById('key-selector');
-  const keyButtonEls = KEY_NAMES.map((name, root) => {
-    const el = document.createElement('button');
-    el.className = 'key-btn' + (root === currentKeyRoot ? ' active' : '');
-    el.textContent = name;
-    el.addEventListener('click', () => {
-      setKeyRoot(root);
-      keyButtonEls.forEach(btn => btn.classList.toggle('active', btn === el));
-    });
-    keySelectorEl.appendChild(el);
-    return el;
+  // --- render the key selector as a dropdown ---
+  const keySelectEl = document.getElementById('key-select');
+  KEY_NAMES.forEach((name, root) => {
+    const option = document.createElement('option');
+    option.value = root;
+    option.textContent = name;
+    keySelectEl.appendChild(option);
+  });
+  keySelectEl.value = currentKeyRoot;
+  keySelectEl.addEventListener('change', () => {
+    setKeyRoot(Number(keySelectEl.value));
   });
 
   function pressDegree(d) {
