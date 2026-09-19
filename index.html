@@ -193,6 +193,18 @@
     width: 18px;
     height: 18px;
   }
+
+  .build-version {
+    position: fixed;
+    bottom: 8px;
+    left: 10px;
+    z-index: 1000;
+    font-size: 10px;
+    font-family: monospace;
+    color: var(--muted);
+    opacity: 0.5;
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
@@ -204,6 +216,8 @@
       <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
     </svg>
   </button>
+
+  <div class="build-version">v1</div>
 
   <div class="synth">
     <div class="joysticks">
