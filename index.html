@@ -78,7 +78,7 @@
     fill: url(#centerGradient);
     stroke: rgba(255,255,255,0.08);
     stroke-width: 1;
-    pointer-events: none;
+    cursor: pointer;
   }
   .joy-center-label {
     font-size: 12px;
@@ -229,7 +229,7 @@
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
 
-  const ATTACK = 0.01;
+  const ATTACK = 0.1;
   const RELEASE = 0.08;
   const GAIN = 0.15;
 
@@ -488,9 +488,17 @@
     }
   }
 
+  const joyCenterCircle = document.querySelector('.joy-center');
+
   joyWedges.forEach(wedge => {
     wedge.addEventListener('mouseenter', () => setJoyDirection(wedge.dataset.dir));
   });
+
+  // The center circle sits flush against the inner edge of all 8 wedges, so
+  // moving the pointer from a wedge straight into the circle never crosses
+  // the SVG's own boundary (no 'mouseleave' on the whole joystick fires).
+  // It needs its own explicit hover handler to reset to center.
+  joyCenterCircle.addEventListener('mouseenter', () => setJoyDirection('center'));
 
   joystickEl.addEventListener('mouseleave', () => setJoyDirection('center'));
 </script>
