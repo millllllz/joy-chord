@@ -132,6 +132,13 @@
     text-transform: uppercase;
     color: var(--muted);
   }
+  .chord-btn .bind-key {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--muted);
+    opacity: 0.6;
+    text-transform: lowercase;
+  }
   .chord-btn:active,
   .chord-btn.active {
     transform: scale(0.96);
@@ -240,14 +247,16 @@
   // --- 7 diatonic chord buttons (key of C major) ---
   // Each button is a scale degree with its own natural triad quality, per
   // the HiChord manual's chord system: I ii iii IV V vi vii°.
+  // 'key' is a stable identifier for each degree; 'bindKey' is the physical
+  // computer-keyboard key that plays it. Odd degrees map to a-s-d-f, even to w-e-r.
   const DEGREES = [
-    { degree: 'I',    key: '1', semitone: 0,  quality: 'major' },
-    { degree: 'ii',   key: '2', semitone: 2,  quality: 'minor' },
-    { degree: 'iii',  key: '3', semitone: 4,  quality: 'minor' },
-    { degree: 'IV',   key: '4', semitone: 5,  quality: 'major' },
-    { degree: 'V',    key: '5', semitone: 7,  quality: 'major' },
-    { degree: 'vi',   key: '6', semitone: 9,  quality: 'minor' },
-    { degree: 'vii°', key: '7', semitone: 11, quality: 'diminished' },
+    { degree: 'I',    key: '1', bindKey: 'a', semitone: 0,  quality: 'major' },
+    { degree: 'ii',   key: '2', bindKey: 'w', semitone: 2,  quality: 'minor' },
+    { degree: 'iii',  key: '3', bindKey: 's', semitone: 4,  quality: 'minor' },
+    { degree: 'IV',   key: '4', bindKey: 'e', semitone: 5,  quality: 'major' },
+    { degree: 'V',    key: '5', bindKey: 'd', semitone: 7,  quality: 'major' },
+    { degree: 'vi',   key: '6', bindKey: 'r', semitone: 9,  quality: 'minor' },
+    { degree: 'vii°', key: '7', bindKey: 'f', semitone: 11, quality: 'diminished' },
   ];
 
   // Natural triad intervals for each base quality.
@@ -294,6 +303,7 @@
   let currentDirection = 'center';
 
   const degreeByKey = new Map(DEGREES.map(d => [d.key, d]));
+  const degreeByBindKey = new Map(DEGREES.map(d => [d.bindKey, d]));
   const heldDegrees = new Map(); // degree key -> direction used when pressed
 
   // --- render the 7 chord buttons: even-numbered on a top row of 3, odd on a bottom row of 4 ---
@@ -309,7 +319,7 @@
     const el = document.createElement('button');
     el.className = 'chord-btn';
     el.dataset.key = d.key;
-    el.innerHTML = `<span class="degree">${d.degree}</span><span class="quality">${d.quality === 'diminished' ? 'dim' : d.quality}</span>`;
+    el.innerHTML = `<span class="degree">${d.degree}</span><span class="quality">${d.quality === 'diminished' ? 'dim' : d.quality}</span><span class="bind-key">${d.bindKey}</span>`;
     const isEven = Number(d.key) % 2 === 0;
     (isEven ? topRowEl : bottomRowEl).appendChild(el);
     d.el = el;
@@ -362,16 +372,16 @@
     d.el.addEventListener('touchcancel', (e) => { e.preventDefault(); releaseDegree(d); }, { passive: false });
   });
 
-  // physical computer-keyboard interaction: number keys 1-7
+  // physical computer-keyboard interaction: odd degrees on a-s-d-f, even on w-e-r
   window.addEventListener('keydown', (e) => {
     if (e.repeat) return;
-    const d = degreeByKey.get(e.key);
+    const d = degreeByBindKey.get(e.key.toLowerCase());
     if (!d) return;
     pressDegree(d);
   });
 
   window.addEventListener('keyup', (e) => {
-    const d = degreeByKey.get(e.key);
+    const d = degreeByBindKey.get(e.key.toLowerCase());
     if (!d) return;
     releaseDegree(d);
   });
