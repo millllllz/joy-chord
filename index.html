@@ -74,35 +74,48 @@
   }
 
   /* Landscape: give the joysticks the whole viewport height (they're square,
-     so height is the binding dimension), with the key dropdown centered in
-     the gap between them instead of stacked underneath. */
+     so height is the binding dimension), with the dropdowns stacked in the
+     gap between them instead of underneath both joysticks. */
   @media (orientation: landscape) {
     .synth {
       padding: 2vh 3vw;
     }
     .joysticks {
       display: grid;
-      grid-template-columns: auto auto auto auto;
+      grid-template-columns: auto auto auto;
       align-items: center;
       justify-content: center;
-      gap: clamp(12px, 3vw, 40px);
+      column-gap: clamp(12px, 3vw, 40px);
+      row-gap: 8px;
       flex-wrap: nowrap;
       width: 100%;
     }
     .joystick {
       /* square, capped by whichever of height/width is tighter: full
          viewport height (minus vertical padding) or roughly 40% of the
-         width, since two joysticks + the dropdown share the row */
+         width, since two joysticks + the dropdowns share the row */
       width: min(88vh, 42vw);
       height: min(88vh, 42vw);
       max-width: none;
       max-height: none;
     }
+    .joysticks #degree-joystick,
+    .joysticks #joystick {
+      grid-row: 1 / span 2;
+    }
     .joysticks .key-select {
       margin: 0;
       flex-basis: auto;
       order: 0;
+      grid-column: 2;
+      grid-row: 1;
       justify-self: center;
+      align-self: end;
+    }
+    .joysticks .wave-select {
+      grid-column: 2;
+      grid-row: 2;
+      align-self: start;
     }
   }
   .joy-wedge {
@@ -291,7 +304,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v10</div>
+  <div class="build-version">v11</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
