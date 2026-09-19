@@ -341,21 +341,21 @@
     n.el = el;
   });
 
-  // Recomputes which displayed keys should show the "ghost" highlight: any
-  // key (in either octave) whose pitch class matches a currently-sounding
-  // chord tone that isn't itself the physically-pressed root.
+  // Recomputes which displayed keys should show the "ghost" highlight: the
+  // exact key each currently-sounding chord tone actually lands on (root +
+  // interval, not wrapped to every octave), excluding the pressed root itself.
   function refreshGhostNotes() {
-    const soundingClasses = new Set();
+    const soundingSemitones = new Set();
     heldKeys.forEach((chord, key) => {
       const n = keyByChar.get(key);
       CHORD_INTERVALS[chord].forEach(interval => {
         if (interval === 0) return; // root is shown via 'active', not ghost
-        soundingClasses.add((n.semitone + interval) % 12);
+        soundingSemitones.add(n.semitone + interval);
       });
     });
 
     NOTE_MAP.forEach(n => {
-      const isGhost = !n.el.classList.contains('active') && soundingClasses.has(n.semitone % 12);
+      const isGhost = !n.el.classList.contains('active') && soundingSemitones.has(n.semitone);
       n.el.classList.toggle('ghost', isGhost);
     });
   }
