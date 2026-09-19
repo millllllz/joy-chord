@@ -202,7 +202,7 @@
       <path class="joy-wedge" data-dir="left" d="M 73.04 125.31 L 17.61 148.27 A 100 100 0 0 1 17.61 71.73 L 73.04 94.69 A 40 40 0 0 0 73.04 125.31 Z" />
       <path class="joy-wedge" data-dir="up-left" d="M 73.04 94.69 L 17.61 71.73 A 100 100 0 0 1 71.73 17.61 L 94.69 73.04 A 40 40 0 0 0 73.04 94.69 Z" />
 
-      <text class="joy-label" data-dir="up" x="110.0" y="32.0" text-anchor="middle">maj/min</text>
+      <text class="joy-label" data-dir="up" id="joy-label-up" x="110.0" y="32.0" text-anchor="middle">maj/min</text>
       <text class="joy-label" data-dir="up-right" x="165.2" y="54.8" text-anchor="middle">dom7</text>
       <text class="joy-label" data-dir="right" x="188.0" y="110.0" text-anchor="middle">7th</text>
       <text class="joy-label" data-dir="down-right" x="165.2" y="165.2" text-anchor="middle">9th</text>
@@ -384,6 +384,7 @@
     });
     d.el.classList.add('active');
     updateJoyCenterLabel();
+    updateUpWedgeLabel();
   }
 
   function releaseDegree(d) {
@@ -395,6 +396,7 @@
     });
     d.el.classList.remove('active');
     updateJoyCenterLabel();
+    updateUpWedgeLabel();
   }
 
   function setDirection(direction) {
@@ -485,6 +487,23 @@
       joyCenterEl.textContent = quality === 'diminished' ? 'dim' : quality;
     } else {
       joyCenterEl.textContent = '';
+    }
+  }
+
+  // The 'up' wedge toggles maj/min, but the actual outcome depends on what's
+  // held: major -> minor, minor or diminished -> major. Reflect that outcome
+  // in the label instead of a static "maj/min", so it's clear what pushing
+  // up will actually do to whatever's currently pressed.
+  const joyLabelUp = document.getElementById('joy-label-up');
+  function updateUpWedgeLabel() {
+    const heldQualities = new Set(
+      Array.from(heldDegrees.keys()).map(key => degreeByKey.get(key).quality)
+    );
+    if (heldQualities.size === 1) {
+      const [quality] = heldQualities;
+      joyLabelUp.textContent = quality === 'major' ? '→ min' : '→ maj';
+    } else {
+      joyLabelUp.textContent = 'maj/min';
     }
   }
 
