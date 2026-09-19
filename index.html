@@ -329,7 +329,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v15</div>
+  <div class="build-version">v16</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -383,8 +383,32 @@
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   let audioCtx = null;
 
+  // Shared delay send: every voice's gain feeds into this in parallel with
+  // the dry destination connection, so one feedback delay line is reused
+  // across all voices instead of building a delay chain per note.
+  let delaySend = null;
+  const DELAY_TIME = 0.28;
+  const DELAY_FEEDBACK = 0.32;
+  const DELAY_SEND_LEVEL = 0.22;
+
   function ensureContext() {
-    if (!audioCtx) audioCtx = new AudioCtx();
+    if (!audioCtx) {
+      audioCtx = new AudioCtx();
+
+      delaySend = audioCtx.createGain();
+      delaySend.gain.value = DELAY_SEND_LEVEL;
+
+      const delayNode = audioCtx.createDelay(1.0);
+      delayNode.delayTime.value = DELAY_TIME;
+
+      const feedbackGain = audioCtx.createGain();
+      feedbackGain.gain.value = DELAY_FEEDBACK;
+
+      delaySend.connect(delayNode);
+      delayNode.connect(feedbackGain);
+      feedbackGain.connect(delayNode);
+      delayNode.connect(audioCtx.destination);
+    }
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
 
@@ -410,6 +434,7 @@
 
     osc.connect(gainNode);
     gainNode.connect(audioCtx.destination);
+    gainNode.connect(delaySend);
     osc.start();
 
     voices.set(id, { osc, gainNode });
