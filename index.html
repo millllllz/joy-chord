@@ -291,6 +291,24 @@
     n.el.classList.remove('active');
   }
 
+  function setChord(chord) {
+    if (chord === currentChord) return;
+    const previousChord = currentChord;
+    currentChord = chord;
+
+    // live-retune any keys currently held: swap out old interval voices for the new chord
+    heldKeys.forEach((heldChord, key) => {
+      if (heldChord === previousChord) {
+        CHORD_INTERVALS[previousChord].forEach(interval => stopVoice(`${key}:${interval}`));
+        const n = keyByChar.get(key);
+        CHORD_INTERVALS[chord].forEach(interval => {
+          startVoice(`${key}:${interval}`, noteFreq(n.semitone + interval));
+        });
+        heldKeys.set(key, chord);
+      }
+    });
+  }
+
   // mouse/touch interaction directly on keyboard keys
   NOTE_MAP.forEach(n => {
     n.el.addEventListener('mousedown', () => pressNote(n));
@@ -319,7 +337,7 @@
   const chordHalves = document.querySelectorAll('.chord-half');
   chordHalves.forEach(half => {
     half.addEventListener('mouseenter', () => {
-      currentChord = half.dataset.chord;
+      setChord(half.dataset.chord);
       chordHalves.forEach(h => h.classList.toggle('hover', h === half));
     });
   });
