@@ -245,7 +245,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v5</div>
+  <div class="build-version">v6</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -277,14 +277,14 @@
         <path class="joy-wedge" data-dir="left" d="M 73.04 125.31 L 17.61 148.27 A 100 100 0 0 1 17.61 71.73 L 73.04 94.69 A 40 40 0 0 0 73.04 125.31 Z" />
         <path class="joy-wedge" data-dir="up-left" d="M 73.04 94.69 L 17.61 71.73 A 100 100 0 0 1 71.73 17.61 L 94.69 73.04 A 40 40 0 0 0 73.04 94.69 Z" />
 
-        <text class="joy-label" data-dir="up" id="joy-label-up" x="110.0" y="32.0" text-anchor="middle">maj/min</text>
-        <text class="joy-label" data-dir="up-right" x="165.2" y="54.8" text-anchor="middle">dom7</text>
-        <text class="joy-label" data-dir="right" x="188.0" y="110.0" text-anchor="middle">7th</text>
+        <text class="joy-label" data-dir="up" id="joy-label-up" x="110.0" y="32.0" text-anchor="middle">Maj/Min</text>
+        <text class="joy-label" data-dir="up-right" x="165.2" y="54.8" text-anchor="middle">Dom7</text>
+        <text class="joy-label" data-dir="right" id="joy-label-right" x="188.0" y="110.0" text-anchor="middle">Maj7/min7</text>
         <text class="joy-label" data-dir="down-right" x="165.2" y="165.2" text-anchor="middle">9th</text>
-        <text class="joy-label" data-dir="down" x="110.0" y="188.0" text-anchor="middle">sus4</text>
-        <text class="joy-label" data-dir="down-left" x="54.8" y="165.2" text-anchor="middle">6/sus2</text>
-        <text class="joy-label" data-dir="left" x="32.0" y="110.0" text-anchor="middle">dark</text>
-        <text class="joy-label" data-dir="up-left" x="54.8" y="54.8" text-anchor="middle">aug</text>
+        <text class="joy-label" data-dir="down" x="110.0" y="188.0" text-anchor="middle">Sus4</text>
+        <text class="joy-label" data-dir="down-left" id="joy-label-down-left" x="54.8" y="165.2" text-anchor="middle">6th/Sus2</text>
+        <text class="joy-label" data-dir="left" id="joy-label-left" x="32.0" y="110.0" text-anchor="middle">Min/Dim</text>
+        <text class="joy-label" data-dir="up-left" x="54.8" y="54.8" text-anchor="middle">Aug</text>
 
         <circle class="joy-center" cx="110" cy="110" r="40" />
         <text class="joy-center-label" id="joy-center" x="110" y="110"></text>
@@ -408,8 +408,10 @@
         return [root, 5, fifth];
       case 'down-left':     // add6, or sus2 if the triad has no major 3rd
         return quality === 'major' ? [root, third, fifth, 9] : [root, 2, fifth];
-      case 'left':          // darken: flatten the 5th
-        return [root, third, fifth - 1];
+      case 'left':          // darken: major -> minor, minor -> diminished
+        if (quality === 'major') return BASE_TRIAD.minor;
+        if (quality === 'minor') return BASE_TRIAD.diminished;
+        return [root, third, fifth];
       case 'up-left':       // augmented: raise the 5th
         return [root, third, fifth + 1];
       default:
@@ -417,11 +419,31 @@
     }
   }
 
+  // Fixed labels for directions whose effect doesn't depend on the held
+  // chord's quality. Directions that DO depend on quality (up, right,
+  // down-left, left) are handled dynamically by QUALITY_LABELS below.
   const CHORD_LABELS = {
-    center: null, up: 'maj/min', 'up-right': 'dom7', right: '7th',
-    'down-right': 'add9', down: 'sus4', 'down-left': '6/sus2',
-    left: 'dark', 'up-left': 'aug',
+    center: null, 'up-right': 'Dom7', 'down-right': '9th', down: 'Sus4', 'up-left': 'Aug',
   };
+
+  // Per the HiChord manual's default joystick mode, these 4 directions
+  // change what they do depending on the held chord's quality, so their
+  // displayed label must track that too instead of showing a static word:
+  //   up:         major -> minor / minor,diminished -> major
+  //   right:      major -> Maj7  / minor -> min7
+  //   down-left:  major -> 6th   / minor -> Sus2
+  //   left:       major -> minor / minor -> diminished (darken one step)
+  const QUALITY_LABELS = {
+    up:         { major: 'min', other: 'maj' },
+    right:      { major: 'Maj7', other: 'min7' },
+    'down-left': { major: '6th', other: 'Sus2' },
+    left:       { major: 'Min', other: 'Dim' },
+  };
+  function qualityLabel(direction, quality) {
+    const labels = QUALITY_LABELS[direction];
+    return quality === 'major' ? labels.major : labels.other;
+  }
+
   let currentDirection = 'center';
 
   // Global key: semitone offset from C. All 7 buttons transpose together,
@@ -658,7 +680,7 @@
   // action that changes what's held or the joystick direction.
   function refreshLabels() {
     updateJoyCenterLabel();
-    updateUpWedgeLabel();
+    updateQualityWedgeLabels();
     updateDegreeCenterLabel();
   }
 
@@ -670,14 +692,13 @@
   }
 
   // At center, show the natural quality of whatever's currently held (so it's
-  // clear the chord "snapped back" rather than looking blank/stuck). 'up' is
-  // special-cased the same way, since it toggles maj/min and the actual
-  // outcome depends on what's held rather than being a fixed label. Every
-  // other direction shows its fixed modification name regardless of what's held.
+  // clear the chord "snapped back" rather than looking blank/stuck). Directions
+  // in QUALITY_LABELS show their held-quality-dependent outcome instead of a
+  // fixed word; every other direction shows its fixed modification name.
   function updateJoyCenterLabel() {
-    if (currentDirection === 'up') {
+    if (QUALITY_LABELS[currentDirection]) {
       const quality = soleHeldQuality();
-      joyCenterEl.textContent = quality ? (quality === 'major' ? 'min' : 'maj') : 'maj/min';
+      joyCenterEl.textContent = quality ? qualityLabel(currentDirection, quality) : QUALITY_WEDGE_DEFAULTS[currentDirection];
       return;
     }
     if (currentDirection !== 'center') {
@@ -688,14 +709,24 @@
     joyCenterEl.textContent = quality ? (quality === 'diminished' ? 'dim' : quality) : '';
   }
 
-  // The 'up' wedge toggles maj/min, but the actual outcome depends on what's
-  // held: major -> minor, minor or diminished -> major. Reflect that outcome
-  // in the label instead of a static "maj/min", so it's clear what pushing
-  // up will actually do to whatever's currently pressed.
-  const joyLabelUp = document.getElementById('joy-label-up');
-  function updateUpWedgeLabel() {
+  // The up/right/down-left/left wedges each do something different depending
+  // on the held chord's quality (see QUALITY_LABELS), so their displayed
+  // label tracks that outcome instead of showing a static generic word —
+  // makes it clear what pushing that direction will actually do right now.
+  const qualityWedgeLabels = {
+    up: document.getElementById('joy-label-up'),
+    right: document.getElementById('joy-label-right'),
+    'down-left': document.getElementById('joy-label-down-left'),
+    left: document.getElementById('joy-label-left'),
+  };
+  const QUALITY_WEDGE_DEFAULTS = {
+    up: 'Maj/Min', right: 'Maj7/min7', 'down-left': '6th/Sus2', left: 'Min/Dim',
+  };
+  function updateQualityWedgeLabels() {
     const quality = soleHeldQuality();
-    joyLabelUp.textContent = quality ? (quality === 'major' ? '→ min' : '→ maj') : 'maj/min';
+    Object.entries(qualityWedgeLabels).forEach(([direction, el]) => {
+      el.textContent = quality ? qualityLabel(direction, quality) : QUALITY_WEDGE_DEFAULTS[direction];
+    });
   }
 
   const joyCenterCircle = document.querySelector('.joy-center');
