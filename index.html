@@ -137,9 +137,18 @@
     stroke-width: 1;
     transition: fill 0.1s ease;
   }
-  .joy-wedge:hover,
   .joy-wedge.active {
     fill: var(--accent-active);
+  }
+  /* :hover only for devices that actually have a hover-capable pointer —
+     on touch, a tap leaves the wedge "stuck" in :hover (most mobile
+     browsers don't clear it until a tap lands elsewhere), so dragging to
+     a new wedge left the old one still highlighted alongside the new
+     one's JS-driven .active fill. */
+  @media (hover: hover) {
+    .joy-wedge:hover {
+      fill: var(--accent-active);
+    }
   }
   .joy-label {
     font-size: 8.5px;
@@ -179,9 +188,13 @@
     stroke-width: 1;
     transition: fill 0.1s ease;
   }
-  .degree-wedge:hover,
   .degree-wedge.active {
     fill: var(--accent);
+  }
+  @media (hover: hover) {
+    .degree-wedge:hover {
+      fill: var(--accent);
+    }
   }
   .degree-label {
     font-size: 15px;
@@ -316,7 +329,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v14</div>
+  <div class="build-version">v15</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
