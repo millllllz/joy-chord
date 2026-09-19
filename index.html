@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chord — Web Synth</title>
+<meta name="theme-color" content="#14161a">
+<meta name="description" content="HiChord-inspired dual-joystick chord synthesizer">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chord">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
   :root {
     color-scheme: dark;
@@ -307,7 +316,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v13</div>
+  <div class="build-version">v14</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -969,6 +978,17 @@
     debugLog(`webkitfullscreenchange event fired, isFullscreen=${isFullscreen()}`);
     updateFullscreenIcon();
   });
+
+  // --- PWA: register the service worker for offline/installable support ---
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => debugLog(`service worker registered, scope: ${reg.scope}`))
+        .catch(err => debugLog(`service worker registration failed: ${err.name}: ${err.message}`));
+    });
+  } else {
+    debugLog('serviceWorker not supported');
+  }
 </script>
 </body>
 </html>
