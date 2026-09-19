@@ -82,22 +82,24 @@
     }
     .joysticks {
       display: grid;
-      grid-template-columns: auto auto auto;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
       justify-content: center;
       column-gap: clamp(12px, 3vw, 40px);
       row-gap: 8px;
-      flex-wrap: nowrap;
       width: 100%;
     }
     .joystick {
-      /* square, capped by whichever of height/width is tighter: full
-         viewport height (minus vertical padding) or roughly 40% of the
-         width, since two joysticks + the dropdowns share the row */
-      width: min(88vh, 42vw);
-      height: min(88vh, 42vw);
-      max-width: none;
+      /* fill whatever width the 1fr grid track actually has (so it can
+         never overflow past the dropdown column, however wide that gets)
+         and stay square via aspect-ratio; max-width is just a ceiling for
+         when the track has more room than the viewport is tall */
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1;
+      max-width: 88vh;
       max-height: none;
+      justify-self: center;
     }
     .joysticks #degree-joystick,
     .joysticks #joystick {
@@ -304,7 +306,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v11</div>
+  <div class="build-version">v12</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
