@@ -179,6 +179,24 @@
     pointer-events: none;
   }
 
+  /* The stick "dot": a knob that tracks the raw pointer/touch position
+     within a joystick, independent of which wedge (if any) it currently
+     reads as — gives the flat SVG pad the continuous-travel feel of a
+     real analog stick rather than just 7-8 discrete zones. It never
+     participates in hit-testing (pointer-events: none), so it can't
+     shadow the wedges/center it's drawn on top of. */
+  .stick-dot {
+    fill: var(--accent);
+    stroke: rgba(0, 0, 0, 0.35);
+    stroke-width: 2;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+    transition: cx 0.08s ease-out, cy 0.08s ease-out, opacity 0.12s ease;
+  }
+  .stick-dot.released {
+    opacity: 0;
+  }
+
   /* degree joystick: 7 wedges instead of 8, plain-text degree labels
      (I, ii, iii...) rather than uppercase modifier names */
   .degree-wedge {
@@ -363,7 +381,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v19</div>
+  <div class="build-version">v20</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -409,6 +427,7 @@
 
         <circle class="joy-center" cx="110" cy="110" r="40" />
         <text class="joy-center-label" id="joy-center" x="110" y="110"></text>
+        <circle class="stick-dot" id="joy-stick-dot" cx="110" cy="110" r="14" />
       </svg>
     </div>
   </div>
@@ -697,6 +716,42 @@
     return el;
   }
 
+  // Both joysticks share the same 220x220 viewBox and center point, so the
+  // stick-dot math below is hardcoded to it rather than parametrized.
+  const STICK_CENTER = 110;
+  const STICK_MAX_RADIUS = 88; // just inside the wedges' outer radius (100)
+
+  // Converts a pointer/touch's page coordinates into the SVG's own user
+  // space (via the screen CTM, so it's correct regardless of how the
+  // joystick is currently scaled/laid out), then clamps the result to
+  // STICK_MAX_RADIUS from center — a real stick can't travel past its
+  // housing either.
+  function clientToStickPoint(svg, clientX, clientY) {
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: STICK_CENTER, y: STICK_CENTER };
+    const local = pt.matrixTransform(ctm.inverse());
+    const dx = local.x - STICK_CENTER;
+    const dy = local.y - STICK_CENTER;
+    const dist = Math.hypot(dx, dy);
+    if (dist <= STICK_MAX_RADIUS || dist === 0) return { x: local.x, y: local.y };
+    const scale = STICK_MAX_RADIUS / dist;
+    return { x: STICK_CENTER + dx * scale, y: STICK_CENTER + dy * scale };
+  }
+
+  function moveStickDot(dotEl, svg, clientX, clientY) {
+    const { x, y } = clientToStickPoint(svg, clientX, clientY);
+    dotEl.setAttribute('cx', x);
+    dotEl.setAttribute('cy', y);
+  }
+
+  function resetStickDot(dotEl) {
+    dotEl.setAttribute('cx', STICK_CENTER);
+    dotEl.setAttribute('cy', STICK_CENTER);
+  }
+
   const degreeJoystickEl = document.getElementById('degree-joystick');
 
   DEGREES.forEach(d => {
@@ -722,6 +777,13 @@
   degreeJoystickEl.appendChild(degreeCenterCircle);
   const degreeCenterLabel = svgEl('text', { class: 'joy-center-label', x: 110, y: 110 });
   degreeJoystickEl.appendChild(degreeCenterLabel);
+
+  // Stick dot for mouse (a single persistent element, since a mouse is one
+  // pointer) plus a per-touch-identifier map, since this joystick supports
+  // real multi-touch — each finger gets its own dot.
+  const degreeMouseDot = svgEl('circle', { class: 'stick-dot', cx: 110, cy: 110, r: 14 });
+  degreeJoystickEl.appendChild(degreeMouseDot);
+  const degreeTouchDots = new Map(); // touch identifier -> dot element
 
   // --- render the key selector as a dropdown ---
   const keySelectEl = document.getElementById('key-select');
@@ -831,6 +893,11 @@
     d.wedgeEl.addEventListener('mouseleave', () => releaseDegree(d));
   });
 
+  degreeJoystickEl.addEventListener('mousemove', (e) => {
+    moveStickDot(degreeMouseDot, degreeJoystickEl, e.clientX, e.clientY);
+  });
+  degreeJoystickEl.addEventListener('mouseleave', () => resetStickDot(degreeMouseDot));
+
   // Touch interaction, supporting multiple simultaneous fingers: each active
   // touch is tracked by its identifier -> currently-held degree, so two (or
   // more) fingers can each hold a different chord at once, and a finger can
@@ -848,6 +915,11 @@
   degreeJoystickEl.addEventListener('touchstart', (e) => {
     e.preventDefault();
     Array.from(e.changedTouches).forEach(touch => {
+      const dot = svgEl('circle', { class: 'stick-dot', cx: 110, cy: 110, r: 14 });
+      degreeJoystickEl.appendChild(dot);
+      degreeTouchDots.set(touch.identifier, dot);
+      moveStickDot(dot, degreeJoystickEl, touch.clientX, touch.clientY);
+
       const d = degreeAtPoint(touch.clientX, touch.clientY);
       if (!d) return;
       touchedDegrees.set(touch.identifier, d.key);
@@ -858,6 +930,9 @@
   degreeJoystickEl.addEventListener('touchmove', (e) => {
     e.preventDefault();
     Array.from(e.changedTouches).forEach(touch => {
+      const dot = degreeTouchDots.get(touch.identifier);
+      if (dot) moveStickDot(dot, degreeJoystickEl, touch.clientX, touch.clientY);
+
       const currentKey = touchedDegrees.get(touch.identifier);
       const d = degreeAtPoint(touch.clientX, touch.clientY);
       const newKey = d ? d.key : null;
@@ -875,6 +950,14 @@
   function endDegreeTouch(e) {
     e.preventDefault();
     Array.from(e.changedTouches).forEach(touch => {
+      const dot = degreeTouchDots.get(touch.identifier);
+      if (dot) {
+        degreeTouchDots.delete(touch.identifier);
+        resetStickDot(dot);
+        dot.classList.add('released');
+        setTimeout(() => dot.remove(), 150);
+      }
+
       const key = touchedDegrees.get(touch.identifier);
       if (!key) return;
       releaseDegree(degreeByKey.get(key));
@@ -975,6 +1058,7 @@
   }
 
   const joyCenterCircle = document.querySelector('.joy-center');
+  const joyStickDot = document.getElementById('joy-stick-dot');
 
   joyWedges.forEach(wedge => {
     wedge.addEventListener('mouseenter', () => setJoyDirection(wedge.dataset.dir));
@@ -987,6 +1071,11 @@
   joyCenterCircle.addEventListener('mouseenter', () => setJoyDirection('center'));
 
   joystickEl.addEventListener('mouseleave', () => setJoyDirection('center'));
+
+  joystickEl.addEventListener('mousemove', (e) => {
+    moveStickDot(joyStickDot, joystickEl, e.clientX, e.clientY);
+  });
+  joystickEl.addEventListener('mouseleave', () => resetStickDot(joyStickDot));
 
   // Touch support for the modifier joystick: since there's only one global
   // currentDirection (this stick isn't per-finger like the degree stick),
@@ -1008,6 +1097,7 @@
     if (modifierTouchId !== null) return;
     const touch = e.changedTouches[0];
     modifierTouchId = touch.identifier;
+    moveStickDot(joyStickDot, joystickEl, touch.clientX, touch.clientY);
     const dir = directionAtPoint(touch.clientX, touch.clientY);
     if (dir) setJoyDirection(dir);
   }, { passive: false });
@@ -1016,6 +1106,7 @@
     e.preventDefault();
     const touch = Array.from(e.changedTouches).find(t => t.identifier === modifierTouchId);
     if (!touch) return;
+    moveStickDot(joyStickDot, joystickEl, touch.clientX, touch.clientY);
     const dir = directionAtPoint(touch.clientX, touch.clientY);
     setJoyDirection(dir || 'center');
   }, { passive: false });
@@ -1025,6 +1116,7 @@
     if (!touch) return;
     e.preventDefault();
     modifierTouchId = null;
+    resetStickDot(joyStickDot);
     setJoyDirection('center');
   }
   joystickEl.addEventListener('touchend', endModifierTouch, { passive: false });
