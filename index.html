@@ -91,11 +91,40 @@
     pointer-events: none;
   }
 
+  .key-selector {
+    display: flex;
+    gap: 4px;
+    margin: 28px 0 0;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .key-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: #22252a;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.1s ease, color 0.1s ease;
+  }
+  .key-btn:hover {
+    background: #2c3038;
+    color: var(--text);
+  }
+  .key-btn.active {
+    background: var(--accent);
+    color: #0d1f19;
+  }
+
   .chord-buttons {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin: 36px 0 8px;
+    margin: 20px 0 8px;
     align-items: center;
   }
   .chord-row {
@@ -187,6 +216,8 @@
     </svg>
 
     <div class="chord-buttons" id="chord-buttons"></div>
+
+    <div class="key-selector" id="key-selector"></div>
   </div>
 
 <script>
@@ -302,6 +333,12 @@
   };
   let currentDirection = 'center';
 
+  // Global key: semitone offset from C. All 7 buttons transpose together,
+  // per the manual: "the relationships between buttons stay the same —
+  // only the pitch changes."
+  const KEY_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  let currentKeyRoot = 0;
+
   const degreeByKey = new Map(DEGREES.map(d => [d.key, d]));
   const degreeByBindKey = new Map(DEGREES.map(d => [d.bindKey, d]));
   const heldDegrees = new Map(); // degree key -> direction used when pressed
@@ -325,11 +362,25 @@
     d.el = el;
   });
 
+  // --- render the 12-key key selector ---
+  const keySelectorEl = document.getElementById('key-selector');
+  const keyButtonEls = KEY_NAMES.map((name, root) => {
+    const el = document.createElement('button');
+    el.className = 'key-btn' + (root === currentKeyRoot ? ' active' : '');
+    el.textContent = name;
+    el.addEventListener('click', () => {
+      setKeyRoot(root);
+      keyButtonEls.forEach(btn => btn.classList.toggle('active', btn === el));
+    });
+    keySelectorEl.appendChild(el);
+    return el;
+  });
+
   function pressDegree(d) {
     if (heldDegrees.has(d.key)) return;
     heldDegrees.set(d.key, currentDirection);
     getChordIntervals(d.quality, currentDirection).forEach(interval => {
-      startVoice(`${d.key}:${interval}`, noteFreq(d.semitone + interval));
+      startVoice(`${d.key}:${interval}`, noteFreq(currentKeyRoot + d.semitone + interval));
     });
     d.el.classList.add('active');
   }
@@ -355,10 +406,26 @@
         const d = degreeByKey.get(key);
         getChordIntervals(d.quality, previousDirection).forEach(interval => stopVoice(`${key}:${interval}`));
         getChordIntervals(d.quality, direction).forEach(interval => {
-          startVoice(`${key}:${interval}`, noteFreq(d.semitone + interval));
+          startVoice(`${key}:${interval}`, noteFreq(currentKeyRoot + d.semitone + interval));
         });
         heldDegrees.set(key, direction);
       }
+    });
+  }
+
+  // Changing key while chords are held retunes them live, the same way the
+  // joystick direction does, so switching key mid-chord doesn't cut the sound.
+  function setKeyRoot(root) {
+    if (root === currentKeyRoot) return;
+    const previousRoot = currentKeyRoot;
+    currentKeyRoot = root;
+
+    heldDegrees.forEach((direction, key) => {
+      const d = degreeByKey.get(key);
+      getChordIntervals(d.quality, direction).forEach(interval => stopVoice(`${key}:${interval}`));
+      getChordIntervals(d.quality, direction).forEach(interval => {
+        startVoice(`${key}:${interval}`, noteFreq(currentKeyRoot + d.semitone + interval));
+      });
     });
   }
 
