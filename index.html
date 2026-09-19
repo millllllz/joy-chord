@@ -179,11 +179,16 @@
     background: #22252a;
     color: var(--muted);
     cursor: pointer;
-    display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     touch-action: manipulation;
+    /* hidden by default; JS reveals it only if the Fullscreen API is
+       actually supported, since it's a dead no-op on some mobile browsers */
+    display: none;
+  }
+  .fullscreen-btn.supported {
+    display: flex;
   }
   .fullscreen-btn:hover {
     background: #2c3038;
@@ -252,7 +257,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v2</div>
+  <div class="build-version">v3</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -777,6 +782,20 @@
   debugLog(`document.documentElement.webkitRequestFullscreen: ${typeof document.documentElement.webkitRequestFullscreen}`);
   debugLog(`isSecureContext: ${window.isSecureContext}`);
   debugLog(`in iframe: ${window.self !== window.top}`);
+
+  // Only show the button when the Fullscreen API is genuinely usable —
+  // some mobile browsers (confirmed: at least one Chrome mobile build)
+  // expose no requestFullscreen at all, where the button would be a dead
+  // no-op forever. document.fullscreenEnabled covers permission-policy
+  // blocks too (e.g. disallowed in an iframe), not just feature presence.
+  const fullscreenSupported = !!(
+    document.fullscreenEnabled &&
+    (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)
+  );
+  debugLog(`fullscreen button shown: ${fullscreenSupported}`);
+  if (fullscreenSupported) {
+    document.getElementById('fullscreen-btn').classList.add('supported');
+  }
 
   function isFullscreen() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
