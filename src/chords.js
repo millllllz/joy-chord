@@ -4,13 +4,13 @@ import { wedgePath } from './wedge-geometry.js';
 // starting at 12 o'clock and going clockwise. The degree label sits at a fixed
 // radius along each wedge's center angle; the quality label is stacked
 // directly beneath it (flat +12 in y, not radial) and the bind-key label
-// directly above it (flat -20 in y, not radial) so "A" / "I" / "MAJOR" always
+// beneath that (flat +26 in y, not radial) so "I" / "MAJOR" / "a" always
 // read as a vertical stack regardless of the wedge's angle.
 const DEGREE_ANGLE_STEP = 360 / 7;
 const CENTER = 110;
 const LABEL_RADIUS = 70;
 const QUALITY_Y_OFFSET = 12;
-const BINDKEY_Y_OFFSET = -20;
+const BINDKEY_Y_OFFSET = 26;
 
 function polar(radius, angleDeg) {
   const a = (angleDeg * Math.PI) / 180;

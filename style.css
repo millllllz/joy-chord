@@ -268,22 +268,32 @@
     opacity: 0.85;
   }
 
-  /* QWERTY bind-key hints on each wedge — only shown once the user has
-     actually pressed a bound key, so touch/mouse-only sessions never see
-     labels for a control scheme they can't use. */
+  /* QWERTY bind-key hints on each wedge, styled as small keycaps — only
+     shown once the user has actually pressed a bound key (so touch/mouse
+     -only sessions never see labels for a control scheme they can't use)
+     and only on viewports wide enough to have a real keyboard (>768px). */
+  .bindkey {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+  @media (min-width: 768px) {
+    body.keyboard-active .bindkey {
+      opacity: 0.7;
+    }
+  }
+  .bindkey-key {
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 1;
+  }
   .bindkey-label {
     font-size: 7px;
     font-weight: 700;
     letter-spacing: 0.02em;
     fill: var(--muted);
-    opacity: 0;
-    pointer-events: none;
     text-anchor: middle;
     dominant-baseline: middle;
-    transition: opacity 0.15s ease;
-  }
-  body.keyboard-active .bindkey-label {
-    opacity: 0.55;
   }
 
   .key-select {

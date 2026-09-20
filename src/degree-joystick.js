@@ -57,9 +57,15 @@ export function init() {
     d.qualityEl = qualityEl;
 
     const [bx, by] = d.bindKeyPos;
-    const bindKeyEl = svgEl('text', { class: 'bindkey-label', 'data-key': d.key, x: bx, y: by });
-    bindKeyEl.textContent = d.bindKey.toUpperCase();
-    degreeJoystick.degreeJoystickEl.insertBefore(bindKeyEl, degreeCenterCircle);
+    const bindKeyGroup = svgEl('g', { class: 'bindkey', 'data-key': d.key });
+    const bindKeyRect = svgEl('rect', {
+      class: 'bindkey-key', x: bx - 8, y: by - 8, width: 16, height: 16, rx: 4,
+    });
+    const bindKeyEl = svgEl('text', { class: 'bindkey-label', x: bx, y: by });
+    bindKeyEl.textContent = d.bindKey.toLowerCase();
+    bindKeyGroup.appendChild(bindKeyRect);
+    bindKeyGroup.appendChild(bindKeyEl);
+    degreeJoystick.degreeJoystickEl.insertBefore(bindKeyGroup, degreeCenterCircle);
     d.bindKeyEl = bindKeyEl;
   });
 
