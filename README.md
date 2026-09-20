@@ -1,10 +1,17 @@
 # JoyChord — Web Synth
 
-JoyChord is an installable PWA HiChord-inspired chord synthesizer. Web Audio API, no build step, no dependencies. App logic lives in one file (`index.html`); `manifest.webmanifest` + `sw.js` + `icons/` make it installable/offline-capable.
+JoyChord is an installable PWA HiChord-inspired chord synthesizer. Web Audio API, no build step, no dependencies. App logic lives in one file (`index.html`, ~1265 lines — HTML/CSS/JS inline, no bundler, no `<script src>`); `manifest.webmanifest` + `sw.js` + `icons/` make it installable/offline-capable.
 
 **Live:** https://millllllz.github.io/joy-chord/
 **Repo:** https://github.com/millllllz/joy-chord (public, `master` branch, deploys via GitHub Pages on push)
 **Current build:** v23 (bottom-left corner of the app; bump on every deploy, see Conventions)
+
+## Orientation for a new agent
+
+- There is no build step and no test runner. "Testing" means opening `index.html` (locally or via the live URL) in a browser and interacting with it — see Conventions below for the verification bar expected before calling a UI change done.
+- The whole app is one file. Search `index.html` for the section you need rather than expecting a module boundary — CSS, SVG markup, and JS are all inline in `<style>`/`<body>`/`<script>` blocks in that one file.
+- `master` is production and deploys on push (GitHub Pages). There is standing authorization to push directly to `master` without asking first — see Conventions.
+- `todo.md` exists in the working directory but is gitignored — it's the user's personal scratch list, not project documentation. Open items from it are folded into "Known open items" below when they're still relevant; don't treat `todo.md` itself as authoritative if it and this README disagree.
 
 ## Naming
 
@@ -48,6 +55,17 @@ Full multi-touch: each finger tracked by touch identifier, can hold independent 
 - Fullscreen button only shown if `document.fullscreenEnabled` + `requestFullscreen` actually exist (confirmed absent on the user's Chrome mobile — don't re-add unconditionally).
 
 ## Known open items / suggested next steps
+
+From the user's working todo list, still open as of this writing:
+
+- **Compartmentalize code** — `index.html` is a single ~1265-line file with no internal module boundary; consider whether/how to split CSS/JS out without breaking the "no build step" constraint (e.g. separate `<script>`/`<style>` files loaded via plain tags, still no bundler).
+- **Light mode** — currently one (dark) theme only; no light-mode styles exist yet.
+- **Left-hand keyboard support** — current keyboard bindings (`a s d f` / `w e r` / `1`-`7`) are one-handed on the right/number row; a left-hand-friendly binding scheme hasn't been designed.
+- **Tremolo effect** — alongside existing delay/reverb (see Architecture); also open-ended: survey what other effects would fit the HiChord-style signal chain.
+- **Envelope editor** — see below, already tracked here before the todo list existed.
+- Background/joystick-label polish items from the todo list ("fix background", "joy lables") were addressed this session (labels: uppercase + two-line split, see Architecture) — re-check `todo.md` directly if picking this up, since it's gitignored and may have moved on since this README was last updated.
+
+Longer-standing items:
 
 - Regression harness: a hidden test mode running oscillator start/stop assertions (triad→7th = +1 voice/0 stops, etc.) to catch future voice-lifecycle regressions without manual instrumentation.
 - Envelope is currently just `ATTACK=0.01, RELEASE=0.08` constants (AR, not full ADSR), linear ramps. Discussed but not built: full ADSR + curve shape + a small UI panel for it.
