@@ -1,12 +1,14 @@
 import { wedgePath } from './wedge-geometry.js';
 
 // 7 equal 51.43deg pie slices (donut, inner r=40 outer r=100, center 110,110),
-// starting at 12 o'clock and going clockwise. Label/quality positions sit at a
-// fixed radius along each wedge's center angle.
+// starting at 12 o'clock and going clockwise. The degree label sits at a fixed
+// radius along each wedge's center angle; the quality label is stacked
+// directly beneath it (flat +12 in y, not radial) so "I" / "MAJOR" always
+// read as a vertical pair regardless of the wedge's angle.
 const DEGREE_ANGLE_STEP = 360 / 7;
 const CENTER = 110;
-const LABEL_RADIUS = 78;
-const QUALITY_RADIUS = LABEL_RADIUS + 12;
+const LABEL_RADIUS = 70;
+const QUALITY_Y_OFFSET = 12;
 
 function polar(radius, angleDeg) {
   const a = (angleDeg * Math.PI) / 180;
@@ -20,10 +22,11 @@ function degreeWedge(index) {
   const start = -DEGREE_ANGLE_STEP / 2 + index * DEGREE_ANGLE_STEP;
   const end = start + DEGREE_ANGLE_STEP;
   const center = (start + end) / 2;
+  const labelPos = polar(LABEL_RADIUS, center);
   return {
     wedge: wedgePath(start, end),
-    labelPos: polar(LABEL_RADIUS, center),
-    qualityPos: polar(QUALITY_RADIUS, center),
+    labelPos,
+    qualityPos: [labelPos[0], Number((labelPos[1] + QUALITY_Y_OFFSET).toFixed(1))],
   };
 }
 
