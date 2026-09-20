@@ -320,18 +320,32 @@
     background: var(--panel-hover);
   }
 
-  /* Both control-group fieldsets share a reset (no default browser border/
-     padding) and a small uppercase legend; only their item axis differs. */
+  /* Both control-group fieldsets share a border (replacing the browser
+     default with one that matches the wedge outlines) and a small
+     uppercase legend; only their item axis differs. */
   .fx-toggles,
   .sound-controls {
-    border: none;
+    border: 1px solid var(--wedge-stroke);
+    border-radius: 8px;
     margin: 0;
-    padding: 0;
+    padding: 6px 8px;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
     gap: 4px;
+  }
+  /* This rule has no media guard, so in source order it would otherwise
+     beat the landscape flex-direction: column override above it (same
+     selector, same specificity — last one in the cascade wins regardless
+     of which came first or which media query it's nested in). Restating
+     the landscape axis here, after it, is what actually makes it stick. */
+  @media (orientation: landscape) {
+    .fx-toggles,
+    .sound-controls {
+      flex-direction: column;
+      flex-wrap: nowrap;
+    }
   }
   /* flex-basis: 100% reliably forces the legend onto its own line when the
      fieldset is a row (basis = width) — but in the landscape column layout
