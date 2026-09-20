@@ -13,7 +13,8 @@
     --gradient-light: #3a3f47;
     --gradient-dark: #22252a;
     --label-active: #0d1f19;
-    --center-circle-stroke: rgba(255,255,255,0.08);
+    --center-circle-fill: rgba(110,231,201,0.15);
+    --center-circle-stroke: rgba(255,255,255,0.1);
     --stick-dot-stroke: rgba(0, 0, 0, 0.35);
     --stick-dot-shadow: rgba(0, 0, 0, 0.45);
     --debug-bg: rgba(0, 0, 0, 0.9);
@@ -35,7 +36,8 @@
       --gradient-light: #f0f0f0;
       --gradient-dark: #e0e0e0;
       --label-active: #ffffff;
-      --center-circle-stroke: rgba(0,0,0,0.08);
+      --center-circle-fill: rgba(5,150,105,0.1);
+      --center-circle-stroke: rgba(0,0,0,0.1);
       --stick-dot-stroke: rgba(255, 255, 255, 0.35);
       --stick-dot-shadow: rgba(0, 0, 0, 0.15);
       --debug-bg: rgba(255, 255, 255, 0.95);
@@ -184,7 +186,7 @@
     fill: var(--label-active);
   }
   .joy-center {
-    fill: url(#centerGradient);
+    fill: var(--center-circle-fill);
     stroke: var(--center-circle-stroke);
     stroke-width: 1;
     cursor: pointer;
