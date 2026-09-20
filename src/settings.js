@@ -12,9 +12,16 @@ export const settings = {
 
 export function init() {
   const keySelectEl = document.getElementById('key-select');
-  settings.KEY_NAMES.forEach((name, root) => {
+  // KEY_NAMES is indexed by semitone-from-C4 (C=0 first), which is also
+  // each option's value — that mapping can't change without shifting what
+  // every existing currentKeyRoot number means. Only the *display* order
+  // is rotated to start at A (the conventional listing order), independent
+  // of which value ends up selected by default (still C, i.e. root 0).
+  const startAt = settings.KEY_NAMES.indexOf('A');
+  const displayOrder = [...settings.KEY_NAMES.slice(startAt), ...settings.KEY_NAMES.slice(0, startAt)];
+  displayOrder.forEach(name => {
     const option = document.createElement('option');
-    option.value = root;
+    option.value = settings.KEY_NAMES.indexOf(name);
     option.textContent = name;
     keySelectEl.appendChild(option);
   });
