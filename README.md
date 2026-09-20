@@ -1,15 +1,15 @@
 # JoyChord — Web Synth
 
-JoyChord is an installable PWA HiChord-inspired chord synthesizer. Web Audio API, no build step, no dependencies. App logic lives in one file (`index.html`, ~1265 lines — HTML/CSS/JS inline, no bundler, no `<script src>`); `manifest.webmanifest` + `sw.js` + `icons/` make it installable/offline-capable.
+JoyChord is an installable PWA HiChord-inspired chord synthesizer. Web Audio API, no build step, no dependencies, no bundler. `index.html` holds markup only; `style.css` and `src/*.js` (loaded as ES modules via plain `<script type="module" src="src/index.js">`, no bundling) hold styling and logic respectively. `manifest.webmanifest` + `sw.js` + `icons/` make it installable/offline-capable — see PWA below, including a real gotcha around keeping `sw.js`'s precache list in sync with the actual `src/*.js` files.
 
 **Live:** https://millllllz.github.io/joy-chord/
 **Repo:** https://github.com/millllllz/joy-chord (public, `master` branch, deploys via GitHub Pages on push)
-**Current build:** v35 (bottom-left corner of the app; bump on every deploy, see Conventions)
+**Current build:** v36 (bottom-left corner of the app; bump on every deploy, see Conventions)
 
 ## Orientation for a new agent
 
 - There is no build step and no test runner. "Testing" means opening `index.html` (locally or via the live URL) in a browser and interacting with it — see Conventions below for the verification bar expected before calling a UI change done.
-- The whole app is one file. Search `index.html` for the section you need rather than expecting a module boundary — CSS, SVG markup, and JS are all inline in `<style>`/`<body>`/`<script>` blocks in that one file.
+- Logic lives in `src/*.js` ES modules (one concern per file — `audio.js`, `effects.js`, `degree-joystick.js`, `modifier-joystick.js`, `chords.js`, `settings.js`, `wedge-geometry.js`, `debug.js`, `fullscreen.js`, wired together by `index.js`), styling in `style.css`, and `index.html` holds only markup (static SVG defs; joystick wedges/labels/dots are built at runtime by the JS). When you add or rename a `src/*.js` file, update `sw.js`'s `ASSETS` precache list to match — it's a hand-maintained mirror of that directory, not auto-derived.
 - `master` is production and deploys on push (GitHub Pages). There is standing authorization to push directly to `master` without asking first — see Conventions.
 - `todo.md` exists in the working directory but is gitignored — it's the user's personal scratch list, not project documentation. Open items from it are folded into "Known open items" below when they're still relevant; don't treat `todo.md` itself as authoritative if it and this README disagree.
 
@@ -51,9 +51,11 @@ The modifier joystick is likewise single-owner. Each still tracks its touch by i
 
 ## PWA
 
-`manifest.webmanifest` (standalone display, icons, theme color) + `sw.js` (stale-while-revalidate cache of the app shell) make the app installable and offline-capable, as an alternative/complement to the feature-detected Fullscreen button for chrome-free mobile launch. Icons live in `icons/` (`icon.svg` source + baked PNGs at 512/192/180 for manifest + `apple-touch-icon`).
+`manifest.webmanifest` (standalone display, icons, theme color) + `sw.js` (network-first cache of the app shell, falling back to cache only when actually offline) make the app installable and offline-capable, as an alternative/complement to the feature-detected Fullscreen button for chrome-free mobile launch. Icons live in `icons/` (`icon.svg` source + baked PNGs at 512/192/180 for manifest + `apple-touch-icon`).
 
-**The service worker's `CACHE_NAME` is tied to the build-version tag** — bump both together on every deploy (see below), or returning visitors can get stuck on a stale cached copy until it happens to revalidate.
+**The service worker's `CACHE_NAME` is tied to the build-version tag** — bump both together on every deploy (see below), or `activate`'s old-cache cleanup never fires for that deploy.
+
+**Why network-first, not stale-while-revalidate**: an earlier version served every GET from cache first (instantly, even the very next load after a deploy) and only refreshed the cache in the background for the load *after that*. That's fine for the page shell/icons but broke on days with several fast deploys (v33→v35 in one sitting): a visit could land mid-transition with a freshly-fetched `index.html` (new effect's dialog markup already present) paired with a still-cached `src/index.js` from before that effect's toggle button was wired up — the button renders but silently does nothing, since the JS actually running never learned it exists. Network-first fetches every resource fresh on every online load, so HTML and JS always come from the same deploy; the cache is now purely an offline fallback (`.catch()` on a failed `fetch()`), not a speed optimization.
 
 ## Conventions established in this project
 
@@ -68,7 +70,6 @@ The modifier joystick is likewise single-owner. Each still tracks its touch by i
 
 From the user's working todo list, still open as of this writing:
 
-- **Compartmentalize code** — `index.html` is a single ~1265-line file with no internal module boundary; consider whether/how to split CSS/JS out without breaking the "no build step" constraint (e.g. separate `<script>`/`<style>` files loaded via plain tags, still no bundler).
 - **Light mode** — currently one (dark) theme only; no light-mode styles exist yet.
 - **Left-hand keyboard support** — current keyboard bindings (`a s d f` / `w e r` / `1`-`7`) are one-handed on the right/number row; a left-hand-friendly binding scheme hasn't been designed.
 - **More effects** — filter, tremolo, delay, and reverb are now built (see Architecture); open-ended: chorus/flanger (modulated delay), distortion (WaveShaperNode), stereo panning (StereoPannerNode), and compression (DynamicsCompressorNode) are all native-node options that haven't been built. A bitcrusher would need an AudioWorkletNode instead — no stock node does sample-rate reduction.
