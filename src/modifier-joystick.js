@@ -91,7 +91,7 @@ export function updateQualityWedgeLabels() {
 export function init() {
   modifierJoystick.joystickEl = document.getElementById('joystick');
   modifierJoystick.joyStickDot = document.getElementById('joy-stick-dot');
-  const joyCenterCircle = document.querySelector('.joy-center');
+  const joyCenterCircle = modifierJoystick.joystickEl.querySelector('.joy-center');
 
   const labelsAnchor = modifierJoystick.joystickEl.querySelector('.joy-label');
   MODIFIER_DIRECTIONS.forEach((dir, i) => {
@@ -258,10 +258,8 @@ function directionAtPoint(x, y) {
   const el = document.elementFromPoint(x, y);
   if (!el) return null;
   if (el.classList.contains('joy-wedge')) return el.dataset.dir;
-  // Scoped to this stick's own element — the degree stick has a same-classed
-  // .joy-center circle too, and an unscoped document.querySelector('.joy-center')
-  // returns whichever one comes first in the document (the degree stick's,
-  // since it's placed before this one), silently never matching here.
+  // The degree stick has a same-classed .joy-center circle too, so confirm
+  // el is specifically this stick's own before treating it as a center hit.
   if (el.classList.contains('joy-center') && el === modifierJoystick.joystickEl.querySelector('.joy-center')) return 'center';
   return null;
 }
