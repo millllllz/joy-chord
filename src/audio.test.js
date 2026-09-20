@@ -259,6 +259,20 @@ describe('audio module', () => {
         const calls = audio.voices.get('seventh').osc.frequency.calls;
         expect(calls).toEqual([{ method: 'setValueAtTime', value: 700, time: 0 }]);
       });
+
+      it('does not glide a brand new chord\'s notes in from each other when nothing was held before', () => {
+        // oldTarget is empty (no prior degree held) — every id in newTarget
+        // is "leftover fresh" with no real antecedent, so each must attack
+        // at its own pitch, not glide in from a sibling note of the same
+        // chord it's part of.
+        reconcileVoices(
+          new Map(),
+          new Map([['root', 440], ['third', 550], ['fifth', 660]]),
+        );
+        expect(audio.voices.get('root').osc.frequency.calls).toEqual([{ method: 'setValueAtTime', value: 440, time: 0 }]);
+        expect(audio.voices.get('third').osc.frequency.calls).toEqual([{ method: 'setValueAtTime', value: 550, time: 0 }]);
+        expect(audio.voices.get('fifth').osc.frequency.calls).toEqual([{ method: 'setValueAtTime', value: 660, time: 0 }]);
+      });
     });
   });
 });

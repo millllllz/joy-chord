@@ -186,7 +186,17 @@ export function reconcileVoices(oldTarget, newTarget) {
   const leftoverStale = staleIds.slice(pairCount);
   const leftoverFresh = freshIds.slice(pairCount);
 
-  if (!audio.glideEdgesEnabled) {
+  // Edges-glide only makes sense when there's an actual prior chord to
+  // glide from/to. An empty oldTarget means this is the very first chord
+  // pressed from silence (no degree was held before) — every "leftover
+  // fresh" id here is really just a tone of a brand new chord with no
+  // antecedent, so its only "nearest neighbor" candidates would be its own
+  // sibling notes. Gliding each note of a fresh chord in from another note
+  // of that same chord isn't voice-leading, it's nonsense — they should
+  // all just attack cleanly like any first note would.
+  const cameFromSilence = oldTarget.size === 0;
+
+  if (!audio.glideEdgesEnabled || cameFromSilence) {
     leftoverStale.forEach(id => stopVoice(id));
     leftoverFresh.forEach(id => startVoice(id, newTarget.get(id)));
     return;
