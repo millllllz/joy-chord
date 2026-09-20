@@ -190,6 +190,13 @@
   .joy-label.active {
     fill: var(--label-active);
   }
+  /* Split A/B labels (e.g. "Maj"/"Min") show both lines at all times; the
+     option that doesn't apply to the held chord's quality is dimmed rather
+     than removed, so the wedge doesn't jump between one-line and two-line
+     layouts as chords change. */
+  .joy-label tspan.dimmed {
+    opacity: 0.35;
+  }
   .joy-label-rule {
     stroke: var(--muted);
     stroke-width: 0.75;

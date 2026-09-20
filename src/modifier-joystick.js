@@ -42,9 +42,12 @@ function soleHeldQuality() {
   return qualities.size === 1 ? [...qualities][0] : null;
 }
 
-// Render `text` into a modifier label: a single centered word, or — if it
-// contains "/" — two stacked lines separated by a thin horizontal rule.
-function renderJoyLabel(labelEl, text) {
+// Render `text` (always the "A/B" default) into a modifier label as two
+// stacked lines separated by a thin horizontal rule. When `resolved` names
+// which of the two currently applies (the held chord's quality determines
+// it), the other one is dimmed rather than removed — both options stay
+// visible so the wedge doesn't visually jump around as chords change.
+function renderJoyLabel(labelEl, text, resolved) {
   const dir = labelEl.getAttribute('data-dir');
   const x = Number(labelEl.getAttribute('x'));
   const y = Number(labelEl.getAttribute('y'));
@@ -54,16 +57,15 @@ function renderJoyLabel(labelEl, text) {
   const prevRule = labelEl.parentNode.querySelector(`.joy-label-rule[data-dir="${dir}"]`);
   if (prevRule) prevRule.remove();
 
-  if (!text.includes('/')) {
-    labelEl.textContent = text;
-    return;
-  }
-
   const [top, bottom] = text.split('/');
   const topSpan = svgEl('tspan', { x, dy: '-0.55em' });
   topSpan.textContent = top;
   const bottomSpan = svgEl('tspan', { x, dy: '1.9em' });
   bottomSpan.textContent = bottom;
+  if (resolved) {
+    topSpan.classList.toggle('dimmed', top.toLowerCase() !== resolved.toLowerCase());
+    bottomSpan.classList.toggle('dimmed', bottom.toLowerCase() !== resolved.toLowerCase());
+  }
   labelEl.appendChild(topSpan);
   labelEl.appendChild(bottomSpan);
 
@@ -77,7 +79,7 @@ function renderJoyLabel(labelEl, text) {
 export function updateQualityWedgeLabels() {
   const quality = soleHeldQuality();
   Object.entries(qualityWedgeLabels).forEach(([direction, el]) => {
-    renderJoyLabel(el, quality ? qualityLabel(direction, quality) : QUALITY_WEDGE_DEFAULTS[direction]);
+    renderJoyLabel(el, QUALITY_WEDGE_DEFAULTS[direction], quality ? qualityLabel(direction, quality) : null);
   });
 }
 
