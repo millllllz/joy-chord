@@ -17,9 +17,51 @@
 </head>
 <body>
   <div class="fx-toggles">
-    <button class="fx-toggle" id="delay-toggle" type="button" aria-pressed="true">Delay</button>
-    <button class="fx-toggle" id="reverb-toggle" type="button" aria-pressed="true">Reverb</button>
+    <button class="fx-toggle" id="delay-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Delay</button>
+    <button class="fx-toggle" id="reverb-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Reverb</button>
   </div>
+
+  <dialog class="fx-dialog" id="delay-dialog">
+    <form method="dialog" class="fx-dialog-form">
+      <h2>Delay</h2>
+      <label class="fx-dialog-enable">
+        <input type="checkbox" id="delay-enabled-checkbox" checked>
+        Enabled
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Time <span class="fx-dialog-value" id="delay-time-value">280ms</span></span>
+        <input type="range" id="delay-time-slider" min="0.02" max="1" step="0.01" value="0.28">
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Feedback <span class="fx-dialog-value" id="delay-feedback-value">32%</span></span>
+        <input type="range" id="delay-feedback-slider" min="0" max="0.9" step="0.01" value="0.32">
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Send <span class="fx-dialog-value" id="delay-send-value">22%</span></span>
+        <input type="range" id="delay-send-slider" min="0" max="1" step="0.01" value="0.22">
+      </label>
+      <button type="submit" class="fx-dialog-close">Close</button>
+    </form>
+  </dialog>
+
+  <dialog class="fx-dialog" id="reverb-dialog">
+    <form method="dialog" class="fx-dialog-form">
+      <h2>Reverb</h2>
+      <label class="fx-dialog-enable">
+        <input type="checkbox" id="reverb-enabled-checkbox" checked>
+        Enabled
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Decay <span class="fx-dialog-value" id="reverb-decay-value">2.2s</span></span>
+        <input type="range" id="reverb-decay-slider" min="0.2" max="5" step="0.1" value="2.2">
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Send <span class="fx-dialog-value" id="reverb-send-value">18%</span></span>
+        <input type="range" id="reverb-send-slider" min="0" max="1" step="0.01" value="0.18">
+      </label>
+      <button type="submit" class="fx-dialog-close">Close</button>
+    </form>
+  </dialog>
 
   <button class="fullscreen-btn" id="fullscreen-btn" aria-label="Toggle fullscreen" type="button">
     <svg id="fullscreen-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -30,7 +72,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v24</div>
+  <div class="build-version">v25</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 

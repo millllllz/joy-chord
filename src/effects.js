@@ -5,6 +5,9 @@ export const effects = {
   delayEnabled: true,
   reverbSend: null,
   reverbEnabled: true,
+  delayNode: null,
+  delayFeedbackGain: null,
+  convolver: null,
   DELAY_TIME: 0.28,
   DELAY_FEEDBACK: 0.32,
   DELAY_SEND_LEVEL: 0.22,
@@ -19,25 +22,25 @@ export function init() {
   effects.delaySend = audio.ctx.createGain();
   effects.delaySend.gain.value = effects.delayEnabled ? effects.DELAY_SEND_LEVEL : 0;
 
-  const delayNode = audio.ctx.createDelay(1.0);
-  delayNode.delayTime.value = effects.DELAY_TIME;
+  effects.delayNode = audio.ctx.createDelay(1.0);
+  effects.delayNode.delayTime.value = effects.DELAY_TIME;
 
-  const feedbackGain = audio.ctx.createGain();
-  feedbackGain.gain.value = effects.DELAY_FEEDBACK;
+  effects.delayFeedbackGain = audio.ctx.createGain();
+  effects.delayFeedbackGain.gain.value = effects.DELAY_FEEDBACK;
 
-  effects.delaySend.connect(delayNode);
-  delayNode.connect(feedbackGain);
-  feedbackGain.connect(delayNode);
-  delayNode.connect(audio.ctx.destination);
+  effects.delaySend.connect(effects.delayNode);
+  effects.delayNode.connect(effects.delayFeedbackGain);
+  effects.delayFeedbackGain.connect(effects.delayNode);
+  effects.delayNode.connect(audio.ctx.destination);
 
   effects.reverbSend = audio.ctx.createGain();
   effects.reverbSend.gain.value = effects.reverbEnabled ? effects.REVERB_SEND_LEVEL : 0;
 
-  const convolver = audio.ctx.createConvolver();
-  convolver.buffer = createReverbImpulse();
+  effects.convolver = audio.ctx.createConvolver();
+  effects.convolver.buffer = createReverbImpulse();
 
-  effects.reverbSend.connect(convolver);
-  convolver.connect(audio.ctx.destination);
+  effects.reverbSend.connect(effects.convolver);
+  effects.convolver.connect(audio.ctx.destination);
 }
 
 export function setDelayEnabled(enabled) {
@@ -58,4 +61,37 @@ export function setReverbEnabled(enabled) {
     effects.reverbSend.gain.setValueAtTime(effects.reverbSend.gain.value, now);
     effects.reverbSend.gain.linearRampToValueAtTime(enabled ? effects.REVERB_SEND_LEVEL : 0, now + effects.FX_RAMP);
   }
+}
+
+export function setDelayTime(seconds) {
+  effects.DELAY_TIME = seconds;
+  if (effects.delayNode) effects.delayNode.delayTime.value = seconds;
+}
+
+export function setDelayFeedback(amount) {
+  effects.DELAY_FEEDBACK = amount;
+  if (effects.delayFeedbackGain) effects.delayFeedbackGain.gain.value = amount;
+}
+
+export function setDelaySendLevel(level) {
+  effects.DELAY_SEND_LEVEL = level;
+  // Only push it live if the effect is currently on — otherwise this just
+  // updates the target level the next "enabled" ramp will go to.
+  if (effects.delaySend && effects.delayEnabled) effects.delaySend.gain.value = level;
+}
+
+// Changing decay regenerates the impulse response buffer, which is too
+// expensive to do on every 'input' event of a dragged slider — callers
+// should only invoke this on 'change' (i.e. once the drag settles).
+export function setReverbDecay(seconds) {
+  effects.REVERB_DECAY = seconds;
+  audio.REVERB_DECAY = seconds;
+  if (effects.convolver && audio.ctx) {
+    effects.convolver.buffer = createReverbImpulse();
+  }
+}
+
+export function setReverbSendLevel(level) {
+  effects.REVERB_SEND_LEVEL = level;
+  if (effects.reverbSend && effects.reverbEnabled) effects.reverbSend.gain.value = level;
 }

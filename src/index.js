@@ -1,5 +1,15 @@
 import { init as initAudio } from './audio.js';
-import { init as initEffects, setDelayEnabled, setReverbEnabled, effects } from './effects.js';
+import {
+  init as initEffects,
+  effects,
+  setDelayEnabled,
+  setReverbEnabled,
+  setDelayTime,
+  setDelayFeedback,
+  setDelaySendLevel,
+  setReverbDecay,
+  setReverbSendLevel,
+} from './effects.js';
 import { init as initSettings } from './settings.js';
 import { init as initDegreeJoystick } from './degree-joystick.js';
 import { init as initModifierJoystick } from './modifier-joystick.js';
@@ -10,20 +20,92 @@ import { init as initFullscreen } from './fullscreen.js';
 initAudio();
 initEffects();
 
-// Wire up effect toggles
-const delayToggleBtn = document.getElementById('delay-toggle');
-const reverbToggleBtn = document.getElementById('reverb-toggle');
+// Wires an effect's toggle button (opens its <dialog>) plus the dialog's
+// enabled checkbox and parameter sliders. `commitOn: 'change'` is for
+// sliders whose onInput is expensive (regenerating a buffer) — those only
+// fire once a drag settles instead of on every 'input' tick.
+function wireFxDialog({ toggleBtn, dialog, enabledCheckbox, isEnabled, setEnabled, sliders }) {
+  function syncToggleBtn() {
+    toggleBtn.classList.toggle('active', isEnabled());
+    toggleBtn.setAttribute('aria-pressed', String(isEnabled()));
+  }
 
-delayToggleBtn.addEventListener('click', () => {
-  setDelayEnabled(!effects.delayEnabled);
-  delayToggleBtn.classList.toggle('active', effects.delayEnabled);
-  delayToggleBtn.setAttribute('aria-pressed', String(effects.delayEnabled));
+  toggleBtn.addEventListener('click', () => dialog.showModal());
+
+  // Native <dialog> has no built-in click-outside-to-close; clicking the
+  // backdrop still targets the dialog element itself (its content box
+  // doesn't cover the backdrop), so this is the standard light-dismiss check.
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) dialog.close();
+  });
+
+  enabledCheckbox.checked = isEnabled();
+  enabledCheckbox.addEventListener('change', () => {
+    setEnabled(enabledCheckbox.checked);
+    syncToggleBtn();
+  });
+
+  sliders.forEach(({ slider, valueEl, format, onInput, commitOn = 'input' }) => {
+    valueEl.textContent = format(Number(slider.value));
+    slider.addEventListener(commitOn, () => {
+      const value = Number(slider.value);
+      onInput(value);
+      valueEl.textContent = format(value);
+    });
+  });
+
+  syncToggleBtn();
+}
+
+wireFxDialog({
+  toggleBtn: document.getElementById('delay-toggle'),
+  dialog: document.getElementById('delay-dialog'),
+  enabledCheckbox: document.getElementById('delay-enabled-checkbox'),
+  isEnabled: () => effects.delayEnabled,
+  setEnabled: setDelayEnabled,
+  sliders: [
+    {
+      slider: document.getElementById('delay-time-slider'),
+      valueEl: document.getElementById('delay-time-value'),
+      format: (v) => `${Math.round(v * 1000)}ms`,
+      onInput: setDelayTime,
+    },
+    {
+      slider: document.getElementById('delay-feedback-slider'),
+      valueEl: document.getElementById('delay-feedback-value'),
+      format: (v) => `${Math.round(v * 100)}%`,
+      onInput: setDelayFeedback,
+    },
+    {
+      slider: document.getElementById('delay-send-slider'),
+      valueEl: document.getElementById('delay-send-value'),
+      format: (v) => `${Math.round(v * 100)}%`,
+      onInput: setDelaySendLevel,
+    },
+  ],
 });
 
-reverbToggleBtn.addEventListener('click', () => {
-  setReverbEnabled(!effects.reverbEnabled);
-  reverbToggleBtn.classList.toggle('active', effects.reverbEnabled);
-  reverbToggleBtn.setAttribute('aria-pressed', String(effects.reverbEnabled));
+wireFxDialog({
+  toggleBtn: document.getElementById('reverb-toggle'),
+  dialog: document.getElementById('reverb-dialog'),
+  enabledCheckbox: document.getElementById('reverb-enabled-checkbox'),
+  isEnabled: () => effects.reverbEnabled,
+  setEnabled: setReverbEnabled,
+  sliders: [
+    {
+      slider: document.getElementById('reverb-decay-slider'),
+      valueEl: document.getElementById('reverb-decay-value'),
+      format: (v) => `${v.toFixed(1)}s`,
+      onInput: setReverbDecay,
+      commitOn: 'change',
+    },
+    {
+      slider: document.getElementById('reverb-send-slider'),
+      valueEl: document.getElementById('reverb-send-value'),
+      format: (v) => `${Math.round(v * 100)}%`,
+      onInput: setReverbSendLevel,
+    },
+  ],
 });
 
 // Initialize UI

@@ -326,6 +326,82 @@
     color: var(--label-active);
   }
 
+  .fx-dialog {
+    border: none;
+    border-radius: 14px;
+    padding: 20px;
+    width: min(300px, 86vw);
+    background: var(--panel);
+    color: var(--text);
+    font-family: inherit;
+  }
+  .fx-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+  }
+  .fx-dialog-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .fx-dialog h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .fx-dialog-enable {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .fx-dialog-enable input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent-active);
+    cursor: pointer;
+  }
+  .fx-dialog-param {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .fx-dialog-param-label {
+    display: flex;
+    justify-content: space-between;
+  }
+  .fx-dialog-value {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .fx-dialog-param input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent-active);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .fx-dialog-close {
+    align-self: flex-end;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: none;
+    background: var(--panel-hover);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .fx-dialog-close:hover {
+    background: var(--accent-active);
+    color: var(--label-active);
+  }
+
   .fullscreen-btn {
     position: fixed;
     top: 12px;

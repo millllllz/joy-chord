@@ -37,7 +37,7 @@ Full multi-touch: each finger tracked by touch identifier, can hold independent 
 
 **Stick dot**: a small circle on each joystick that follows the actual pointer/touch position (via `getScreenCTM()`, clamped to the wedge radius), giving the flat SVG pad a continuous analog-stick feel on top of the discrete wedge zones. Degree joystick gets one dot per active touch identifier (real multi-touch); modifier joystick gets one persistent dot (single-owner by design). `pointer-events: none`, `opacity: 0.6` so it doesn't obscure the label underneath.
 
-**Effects**: shared delay (DelayNode + feedback gain, 280ms/32%/22% send) and algorithmic reverb (ConvolverNode with a synthesized impulse response — no external audio file) are built lazily in `ensureContext()`, one bus each shared by every voice. Two independent toggle buttons (top-left) ramp each effect's send gain 0↔normal over 50ms; both can be on, either alone, or neither.
+**Effects**: shared delay (DelayNode + feedback gain, defaults 280ms/32%/22% send) and algorithmic reverb (ConvolverNode with a synthesized impulse response — no external audio file, defaults 2.2s decay/18% send) are built lazily in `init()` (`src/effects.js`), one bus each shared by every voice. The "Delay"/"Reverb" buttons (top-left) each open a `<dialog>` with a checkbox (on/off, ramped 0↔normal over 50ms to avoid a click) and a range slider per parameter — delay gets time/feedback/send, reverb gets decay/send. Every slider updates live on `input` except reverb decay, which only commits on `change` since it regenerates the impulse response buffer. Both effects can be on, either alone, or neither, independent of each other and of their own parameter values.
 
 ## PWA
 
