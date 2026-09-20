@@ -17,10 +17,9 @@ export function init() {
   const joyWedges = document.querySelectorAll('.joy-wedge');
 
   const modifierKeyToDir = {
-    // Odds (jkl;): j=up, k=up-left, l=left, ;=down
-    j: 'up',         k: 'up-left',    l: 'left',       ';': 'down',
-    // Evens (iop[): i=up-right, o=right, p=down-left, [=down-right
-    i: 'up-right',   o: 'right',      p: 'down-left',  '[': 'down-right',
+    // Interleaved clockwise from top: odds (jkl;) home row, evens (iop[) top row
+    j: 'up',         i: 'up-right',   k: 'right',      o: 'down-right',
+    l: 'down',       p: 'down-left',  ';': 'left',     '[': 'up-left',
   };
 
   // Mouse interaction
