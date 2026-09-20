@@ -186,6 +186,17 @@
   .joy-label.active {
     fill: var(--label-active);
   }
+  .joy-label-rule {
+    stroke: var(--muted);
+    stroke-width: 0.75;
+    opacity: 0.5;
+    pointer-events: none;
+    transition: stroke 0.1s ease;
+  }
+  .joy-label-rule.active {
+    stroke: var(--label-active);
+    opacity: 0.85;
+  }
   .joy-center {
     fill: var(--center-circle-fill);
     stroke: var(--center-circle-stroke);

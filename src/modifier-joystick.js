@@ -1,5 +1,6 @@
 import { degreeJoystick, setDirection } from './degree-joystick.js';
 import { wedgePath } from './wedge-geometry.js';
+import { chords, qualityLabel } from './chords.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -22,6 +23,64 @@ function svgEl(tag, attrs) {
 const MODIFIER_DIRECTIONS = ['up', 'up-right', 'right', 'down-right', 'down', 'down-left', 'left', 'up-left'];
 const MODIFIER_ANGLE_STEP = 360 / MODIFIER_DIRECTIONS.length;
 
+// The up/right/down-left/left wedges each do something different depending on
+// the held chord's quality (see chords.QUALITY_LABELS), so their label tracks
+// that outcome: a single word (e.g. "min") when a sole quality is held, or the
+// default two-line "A/B" form (e.g. "Maj" over "Min") when nothing/mixed is held.
+const QUALITY_WEDGE_DEFAULTS = {
+  up: 'Maj/Min', right: 'Maj7/min7', 'down-left': '6th/Sus2', left: 'Dim/Min',
+};
+const qualityWedgeLabels = {}; // direction -> label <text> element
+
+// The quality shared by every currently-held degree, or null if none are held
+// or they disagree (a two-line default label is shown in that case).
+function soleHeldQuality() {
+  const qualities = new Set(
+    Array.from(degreeJoystick.heldDegrees.keys())
+      .map(key => degreeJoystick.degreeByKey.get(key).quality)
+  );
+  return qualities.size === 1 ? [...qualities][0] : null;
+}
+
+// Render `text` into a modifier label: a single centered word, or — if it
+// contains "/" — two stacked lines separated by a thin horizontal rule.
+function renderJoyLabel(labelEl, text) {
+  const dir = labelEl.getAttribute('data-dir');
+  const x = Number(labelEl.getAttribute('x'));
+  const y = Number(labelEl.getAttribute('y'));
+
+  // Clear any previous content and divider rule.
+  labelEl.textContent = '';
+  const prevRule = labelEl.parentNode.querySelector(`.joy-label-rule[data-dir="${dir}"]`);
+  if (prevRule) prevRule.remove();
+
+  if (!text.includes('/')) {
+    labelEl.textContent = text;
+    return;
+  }
+
+  const [top, bottom] = text.split('/');
+  const topSpan = svgEl('tspan', { x, dy: '-0.55em' });
+  topSpan.textContent = top;
+  const bottomSpan = svgEl('tspan', { x, dy: '1.9em' });
+  bottomSpan.textContent = bottom;
+  labelEl.appendChild(topSpan);
+  labelEl.appendChild(bottomSpan);
+
+  const rule = svgEl('line', {
+    class: `joy-label-rule${labelEl.classList.contains('active') ? ' active' : ''}`,
+    'data-dir': dir, x1: x - 12, x2: x + 12, y1: y, y2: y,
+  });
+  labelEl.parentNode.insertBefore(rule, labelEl.nextSibling);
+}
+
+export function updateQualityWedgeLabels() {
+  const quality = soleHeldQuality();
+  Object.entries(qualityWedgeLabels).forEach(([direction, el]) => {
+    renderJoyLabel(el, quality ? qualityLabel(direction, quality) : QUALITY_WEDGE_DEFAULTS[direction]);
+  });
+}
+
 export function init() {
   modifierJoystick.joystickEl = document.getElementById('joystick');
   modifierJoystick.joyStickDot = document.getElementById('joy-stick-dot');
@@ -35,6 +94,13 @@ export function init() {
     modifierJoystick.joystickEl.insertBefore(wedgeEl, labelsAnchor);
   });
   const joyWedges = modifierJoystick.joystickEl.querySelectorAll('.joy-wedge');
+
+  // Wire up the quality-dependent wedge labels and render their initial
+  // (nothing-held) two-line default form.
+  Object.keys(QUALITY_WEDGE_DEFAULTS).forEach(dir => {
+    qualityWedgeLabels[dir] = modifierJoystick.joystickEl.querySelector(`.joy-label[data-dir="${dir}"]`);
+  });
+  updateQualityWedgeLabels();
 
   const modifierKeyToDir = {
     // Interleaved clockwise from top: odds (jkl;) home row, evens (iop[) top row
@@ -150,6 +216,8 @@ export function setJoyDirection(dir) {
   modifierJoystick.currentDirection = dir;
   const joyWedges = document.querySelectorAll('.joy-wedge');
   const joyLabels = document.querySelectorAll('.joy-label');
+  const joyRules = document.querySelectorAll('.joy-label-rule');
   joyWedges.forEach(w => w.classList.toggle('active', w.dataset.dir === dir));
   joyLabels.forEach(l => l.classList.toggle('active', l.dataset.dir === dir));
+  joyRules.forEach(r => r.classList.toggle('active', r.dataset.dir === dir));
 }

@@ -2,6 +2,7 @@ import { audio, startVoice, stopVoice, noteFreq } from './audio.js';
 import { effects } from './effects.js';
 import { chords, getChordIntervals } from './chords.js';
 import { settings } from './settings.js';
+import { updateQualityWedgeLabels } from './modifier-joystick.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -203,6 +204,7 @@ function pressDegree(d) {
   d.wedgeEl.classList.add('active');
   d.labelEl.classList.add('active');
   d.qualityEl.classList.add('active');
+  updateQualityWedgeLabels();
 }
 
 function releaseDegree(d) {
@@ -213,6 +215,7 @@ function releaseDegree(d) {
   d.wedgeEl.classList.remove('active');
   d.labelEl.classList.remove('active');
   d.qualityEl.classList.remove('active');
+  updateQualityWedgeLabels();
 }
 
 export function setDirection(direction) {
