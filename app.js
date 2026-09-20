@@ -648,6 +648,38 @@
     wedge.addEventListener('mouseenter', () => setJoyDirection(wedge.dataset.dir));
   });
 
+  // physical computer-keyboard interaction for the modifier joystick: the 8
+  // directions in clockwise order (from 12 o'clock) are numbered 1-8; odd
+  // positions bind to h-j-k-l and even positions to u-i-o-p, in order. Hold a
+  // key to apply that modifier, release to snap back to center (mirroring the
+  // hover/leave mouse behavior).
+  const modifierKeyToDir = {
+    h: 'up',    u: 'up-right', j: 'right', i: 'down-right',
+    k: 'down',  o: 'down-left', l: 'left', p: 'up-left',
+  };
+  // Track which modifier keys are currently held so releasing one only snaps
+  // back to center when no other modifier key is still down.
+  const heldModifierKeys = new Set();
+  window.addEventListener('keydown', (e) => {
+    if (e.repeat) return;
+    const dir = modifierKeyToDir[e.key.toLowerCase()];
+    if (!dir) return;
+    heldModifierKeys.add(e.key.toLowerCase());
+    setJoyDirection(dir);
+  });
+  window.addEventListener('keyup', (e) => {
+    const key = e.key.toLowerCase();
+    if (!(key in modifierKeyToDir)) return;
+    heldModifierKeys.delete(key);
+    if (heldModifierKeys.size === 0) {
+      setJoyDirection('center');
+    } else {
+      // Fall back to whichever modifier key is still held.
+      const remaining = [...heldModifierKeys][0];
+      setJoyDirection(modifierKeyToDir[remaining]);
+    }
+  });
+
   // The center circle sits flush against the inner edge of all 8 wedges, so
   // moving the pointer from a wedge straight into the circle never crosses
   // the SVG's own boundary (no 'mouseleave' on the whole joystick fires).
