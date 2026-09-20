@@ -4,7 +4,7 @@ JoyChord is an installable PWA HiChord-inspired chord synthesizer. Web Audio API
 
 **Live:** https://millllllz.github.io/joy-chord/
 **Repo:** https://github.com/millllllz/joy-chord (public, `master` branch, deploys via GitHub Pages on push)
-**Current build:** v28 (bottom-left corner of the app; bump on every deploy, see Conventions)
+**Current build:** v29 (bottom-left corner of the app; bump on every deploy, see Conventions)
 
 ## Orientation for a new agent
 
@@ -35,11 +35,11 @@ A `<select>` dropdown transposes all 7 degrees together (global key root, semito
 
 Voices are tracked per-degree by absolute pitch (`degreeKey:semitone`) and reconciled on every change (chord press, joystick move, key change) so only notes that actually enter/leave the chord get started/stopped — shared tones sustain without re-triggering their envelope.
 
-Full multi-touch: each finger tracked by touch identifier, can hold independent chords, drag between wedges without lifting. `:hover` CSS is scoped to `@media (hover: hover)` since touch leaves a wedge "stuck" in `:hover` on most mobile browsers after a drag — touch relies solely on the JS-driven `.active` class.
+**One degree sounds at a time.** `pressDegree()` releases whatever was held before starting the new one, so no input can stack two chords — the degree stick takes a single owning touch (`degreeTouchId`) and ignores further fingers until it lifts, and on the keyboard a second degree key steals from the first rather than adding to it. Note this makes the *degree* monophonic, not the synth: a degree is still a full chord of simultaneous voices, and the modifier stick is independently held on top of it. Lifting an ignored second finger deliberately doesn't end the owning touch.
 
-**Stick dot**: a small circle on each joystick that follows the actual pointer/touch position (via `getScreenCTM()`, clamped to the wedge radius), giving the flat SVG pad a continuous analog-stick feel on top of the discrete wedge zones. Degree joystick gets one dot per active touch identifier (real multi-touch); modifier joystick gets one persistent dot (single-owner by design). `pointer-events: none`, `opacity: 0.6` so it doesn't obscure the label underneath.
+The modifier joystick is likewise single-owner. Each still tracks its touch by identifier, and both can be held at once (one finger per stick), so dragging between wedges without lifting works on either. `:hover` CSS is scoped to `@media (hover: hover)` since touch leaves a wedge "stuck" in `:hover` on most mobile browsers after a drag — touch relies solely on the JS-driven `.active` class.
 
-The degree joystick also keeps a separate mouse-only dot, and it starts carrying `.released` (opacity 0) — it's revealed on `mousemove` and hidden again on `mouseleave`. It has to, because on a touch device no `mousemove` ever fires: left visible it would sit parked at dead centre forever next to the finger's dot, reading as a second stuck touch point. The modifier joystick doesn't need this, since its single dot is shared by mouse and touch and therefore moves either way.
+**Stick dot**: a small circle on each joystick that follows the actual pointer/touch position (via `getScreenCTM()`, clamped to the wedge radius), giving the flat SVG pad a continuous analog-stick feel on top of the discrete wedge zones. Both joysticks get exactly one dot, shared between mouse and touch, and it stays visible at all times — resting at dead centre when nothing is driving it, which reads as the stick's neutral position. (The degree stick briefly had a dot per touch identifier plus a separate mouse-only dot; on a touch device the mouse one never received a `mousemove`, so it sat parked at centre looking like a second stuck touch point.)
 
 **Effects**: shared delay (DelayNode + feedback gain, defaults 280ms/32%/22% send) and algorithmic reverb (ConvolverNode with a synthesized impulse response — no external audio file, defaults 2.2s decay/18% send) are built lazily in `init()` (`src/effects.js`), one bus each shared by every voice. The "Delay"/"Reverb" buttons (in the center control column, alongside the key and waveform dropdowns) each open a `<dialog>` with a checkbox (on/off, ramped 0↔normal over 50ms to avoid a click) and a range slider per parameter — delay gets time/feedback/send, reverb gets decay/send. Every slider updates live on `input` except reverb decay, which only commits on `change` since it regenerates the impulse response buffer. Both effects can be on, either alone, or neither, independent of each other and of their own parameter values.
 

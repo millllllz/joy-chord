@@ -13,9 +13,11 @@ export const degreeJoystick = {
   degreeByKey: new Map(),
   degreeByBindKey: new Map(),
   degreeJoystickEl: null,
-  degreeMouseDot: null,
-  degreeTouchDots: new Map(),
-  touchedDegrees: new Map(),
+  degreeStickDot: null,
+  // One finger owns the stick at a time; further touches are ignored rather
+  // than stacking a second chord on top.
+  degreeTouchId: null,
+  touchedDegreeKey: null,
 };
 
 export function init() {
@@ -52,12 +54,10 @@ export function init() {
   const degreeCenterLabel = svgEl('text', { class: 'degree-center-label', x: 110, y: 110 });
   degreeJoystick.degreeJoystickEl.appendChild(degreeCenterLabel);
 
-  // Starts hidden: this dot tracks the mouse only, and touch gets its own
-  // dot per identifier below. On a touch device no mousemove ever fires, so
-  // without this it would sit parked at dead centre forever alongside the
-  // finger's dot, reading as a second stuck touch point.
-  degreeJoystick.degreeMouseDot = svgEl('circle', { class: 'stick-dot released', cx: 110, cy: 110, r: 14 });
-  degreeJoystick.degreeJoystickEl.appendChild(degreeJoystick.degreeMouseDot);
+  // One dot, shared by mouse and touch, resting visibly at centre when
+  // nothing is driving it — the stick's neutral position.
+  degreeJoystick.degreeStickDot = svgEl('circle', { class: 'stick-dot', cx: 110, cy: 110, r: 14 });
+  degreeJoystick.degreeJoystickEl.appendChild(degreeJoystick.degreeStickDot);
 
   // Mouse interaction
   chords.DEGREES.forEach(d => {
@@ -66,66 +66,50 @@ export function init() {
   });
 
   degreeJoystick.degreeJoystickEl.addEventListener('mousemove', (e) => {
-    degreeJoystick.degreeMouseDot.classList.remove('released');
-    moveStickDot(degreeJoystick.degreeMouseDot, degreeJoystick.degreeJoystickEl, e.clientX, e.clientY);
+    moveStickDot(degreeJoystick.degreeStickDot, degreeJoystick.degreeJoystickEl, e.clientX, e.clientY);
   });
-  degreeJoystick.degreeJoystickEl.addEventListener('mouseleave', () => {
-    resetStickDot(degreeJoystick.degreeMouseDot);
-    degreeJoystick.degreeMouseDot.classList.add('released');
-  });
+  degreeJoystick.degreeJoystickEl.addEventListener('mouseleave', () => resetStickDot(degreeJoystick.degreeStickDot));
 
   // Touch interaction
   degreeJoystick.degreeJoystickEl.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    Array.from(e.changedTouches).forEach(touch => {
-      const dot = svgEl('circle', { class: 'stick-dot', cx: 110, cy: 110, r: 14 });
-      degreeJoystick.degreeJoystickEl.appendChild(dot);
-      degreeJoystick.degreeTouchDots.set(touch.identifier, dot);
-      moveStickDot(dot, degreeJoystick.degreeJoystickEl, touch.clientX, touch.clientY);
+    if (degreeJoystick.degreeTouchId !== null) return;
+    const touch = e.changedTouches[0];
+    degreeJoystick.degreeTouchId = touch.identifier;
+    moveStickDot(degreeJoystick.degreeStickDot, degreeJoystick.degreeJoystickEl, touch.clientX, touch.clientY);
 
-      const d = degreeAtPoint(touch.clientX, touch.clientY);
-      if (!d) return;
-      degreeJoystick.touchedDegrees.set(touch.identifier, d.key);
-      pressDegree(d);
-    });
+    const d = degreeAtPoint(touch.clientX, touch.clientY);
+    if (!d) return;
+    degreeJoystick.touchedDegreeKey = d.key;
+    pressDegree(d);
   }, { passive: false });
 
   degreeJoystick.degreeJoystickEl.addEventListener('touchmove', (e) => {
     e.preventDefault();
-    Array.from(e.changedTouches).forEach(touch => {
-      const dot = degreeJoystick.degreeTouchDots.get(touch.identifier);
-      if (dot) moveStickDot(dot, degreeJoystick.degreeJoystickEl, touch.clientX, touch.clientY);
+    const touch = Array.from(e.changedTouches).find(t => t.identifier === degreeJoystick.degreeTouchId);
+    if (!touch) return;
+    moveStickDot(degreeJoystick.degreeStickDot, degreeJoystick.degreeJoystickEl, touch.clientX, touch.clientY);
 
-      const currentKey = degreeJoystick.touchedDegrees.get(touch.identifier);
-      const d = degreeAtPoint(touch.clientX, touch.clientY);
-      const newKey = d ? d.key : null;
-      if (newKey === currentKey) return;
-      if (currentKey) releaseDegree(degreeJoystick.degreeByKey.get(currentKey));
-      if (d) {
-        pressDegree(d);
-        degreeJoystick.touchedDegrees.set(touch.identifier, d.key);
-      } else {
-        degreeJoystick.touchedDegrees.delete(touch.identifier);
-      }
-    });
+    const currentKey = degreeJoystick.touchedDegreeKey;
+    const d = degreeAtPoint(touch.clientX, touch.clientY);
+    const newKey = d ? d.key : null;
+    if (newKey === currentKey) return;
+    if (currentKey) releaseDegree(degreeJoystick.degreeByKey.get(currentKey));
+    if (d) pressDegree(d);
+    degreeJoystick.touchedDegreeKey = newKey;
   }, { passive: false });
 
   const endDegreeTouch = (e) => {
     e.preventDefault();
-    Array.from(e.changedTouches).forEach(touch => {
-      const dot = degreeJoystick.degreeTouchDots.get(touch.identifier);
-      if (dot) {
-        degreeJoystick.degreeTouchDots.delete(touch.identifier);
-        resetStickDot(dot);
-        dot.classList.add('released');
-        setTimeout(() => dot.remove(), 150);
-      }
+    const touch = Array.from(e.changedTouches).find(t => t.identifier === degreeJoystick.degreeTouchId);
+    if (!touch) return;
+    degreeJoystick.degreeTouchId = null;
+    resetStickDot(degreeJoystick.degreeStickDot);
 
-      const key = degreeJoystick.touchedDegrees.get(touch.identifier);
-      if (!key) return;
-      releaseDegree(degreeJoystick.degreeByKey.get(key));
-      degreeJoystick.touchedDegrees.delete(touch.identifier);
-    });
+    const key = degreeJoystick.touchedDegreeKey;
+    if (!key) return;
+    releaseDegree(degreeJoystick.degreeByKey.get(key));
+    degreeJoystick.touchedDegreeKey = null;
   };
   degreeJoystick.degreeJoystickEl.addEventListener('touchend', endDegreeTouch, { passive: false });
   degreeJoystick.degreeJoystickEl.addEventListener('touchcancel', endDegreeTouch, { passive: false });
@@ -207,6 +191,12 @@ function updateDegreeVoicing(d, direction) {
 
 function pressDegree(d) {
   if (degreeJoystick.heldDegrees.has(d.key)) return;
+  // Monophonic by degree: a new one takes over from whatever was sounding,
+  // so keyboard and mouse can't stack chords either. Snapshot the keys
+  // first, since releaseDegree deletes from the map being walked.
+  [...degreeJoystick.heldDegrees.keys()].forEach(key => {
+    releaseDegree(degreeJoystick.degreeByKey.get(key));
+  });
   degreeJoystick.heldDegrees.set(d.key, degreeJoystick.currentDirection);
   updateDegreeVoicing(d, degreeJoystick.currentDirection);
   d.wedgeEl.classList.add('active');

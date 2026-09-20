@@ -234,10 +234,7 @@
     pointer-events: none;
     opacity: 0.6;
     filter: drop-shadow(0 2px 3px var(--stick-dot-shadow));
-    transition: cx 0.08s ease-out, cy 0.08s ease-out, opacity 0.12s ease;
-  }
-  .stick-dot.released {
-    opacity: 0;
+    transition: cx 0.08s ease-out, cy 0.08s ease-out;
   }
 
   /* degree joystick: 7 wedges instead of 8, plain-text degree labels
