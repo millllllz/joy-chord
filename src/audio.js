@@ -55,9 +55,7 @@ export function startVoice(id, freq) {
   gainNode.gain.linearRampToValueAtTime(GAIN, audio.ctx.currentTime + ATTACK);
 
   osc.connect(gainNode);
-  gainNode.connect(audio.ctx.destination);
-  gainNode.connect(effects.delaySend);
-  gainNode.connect(effects.reverbSend);
+  gainNode.connect(effects.filterNode);
   osc.start();
 
   audio.voices.set(id, { osc, gainNode });

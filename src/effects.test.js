@@ -4,24 +4,30 @@ import {
   init,
   setDelayEnabled,
   setReverbEnabled,
+  setFilterEnabled,
   setDelayTime,
   setDelayFeedback,
   setDelaySendLevel,
   setReverbDecay,
   setReverbSendLevel,
+  setFilterCutoff,
+  setFilterResonance,
 } from './effects.js';
-import { audio } from './audio.js';
+import { audio, startVoice } from './audio.js';
 
 describe('effects module', () => {
   beforeEach(() => {
     effects.delayEnabled = true;
     effects.reverbEnabled = true;
+    effects.filterEnabled = true;
     effects.delayNode = null;
     effects.delayFeedbackGain = null;
     effects.convolver = null;
     effects.delaySend = null;
     effects.reverbSend = null;
+    effects.filterNode = null;
     audio.ctx = null;
+    audio.voices = new Map();
   });
 
   it('exports configurable effect parameters', () => {
@@ -30,6 +36,8 @@ describe('effects module', () => {
     expect(effects.DELAY_SEND_LEVEL).toBe(0.22);
     expect(effects.REVERB_DECAY).toBe(2.2);
     expect(effects.REVERB_SEND_LEVEL).toBe(0.18);
+    expect(effects.FILTER_CUTOFF).toBe(2500);
+    expect(effects.FILTER_RESONANCE).toBe(1);
     expect(effects.FX_RAMP).toBe(0.05);
   });
 
@@ -47,6 +55,13 @@ describe('effects module', () => {
     expect(effects.reverbEnabled).toBe(true);
   });
 
+  it('tracks filter enabled state', () => {
+    effects.filterEnabled = false;
+    expect(effects.filterEnabled).toBe(false);
+    effects.filterEnabled = true;
+    expect(effects.filterEnabled).toBe(true);
+  });
+
   it('parameter setters update state even before init() has run', () => {
     setDelayTime(0.5);
     expect(effects.DELAY_TIME).toBe(0.5);
@@ -58,6 +73,10 @@ describe('effects module', () => {
     expect(effects.REVERB_DECAY).toBe(3.5);
     setReverbSendLevel(0.3);
     expect(effects.REVERB_SEND_LEVEL).toBe(0.3);
+    setFilterCutoff(4000);
+    expect(effects.FILTER_CUTOFF).toBe(4000);
+    setFilterResonance(6);
+    expect(effects.FILTER_RESONANCE).toBe(6);
   });
 
   it('pushes delay parameter changes live onto the audio nodes once initialized', () => {
@@ -76,6 +95,52 @@ describe('effects module', () => {
     setDelaySendLevel(0.9);
     expect(effects.DELAY_SEND_LEVEL).toBe(0.9);
     expect(effects.delaySend.gain.value).not.toBe(0.9);
+  });
+
+  it('pushes filter parameter changes live onto the audio node once initialized', () => {
+    init();
+    setFilterCutoff(5000);
+    expect(effects.filterNode.frequency.value).toBe(5000);
+    setFilterResonance(8);
+    expect(effects.filterNode.Q.value).toBe(8);
+  });
+
+  it('does not push filter cutoff/resonance live while the filter is disabled', () => {
+    init();
+    setFilterEnabled(false);
+    setFilterCutoff(5000);
+    setFilterResonance(8);
+    expect(effects.FILTER_CUTOFF).toBe(5000);
+    expect(effects.FILTER_RESONANCE).toBe(8);
+    expect(effects.filterNode.frequency.value).not.toBe(5000);
+    expect(effects.filterNode.Q.value).not.toBe(8);
+  });
+
+  it('ramps the filter fully open (not just silent) when disabled, since it sits in the dry path', () => {
+    init();
+    setFilterEnabled(false);
+    expect(effects.filterNode.frequency.value).toBeGreaterThan(15000);
+    expect(effects.filterNode.Q.value).toBeLessThan(0.01);
+  });
+
+  it('restores the configured cutoff/resonance when re-enabled', () => {
+    init();
+    setFilterCutoff(3300);
+    setFilterResonance(4);
+    setFilterEnabled(false);
+    setFilterEnabled(true);
+    expect(effects.filterNode.frequency.value).toBe(3300);
+    expect(effects.filterNode.Q.value).toBe(4);
+  });
+
+  it('routes each voice through the shared filter rather than straight to destination', () => {
+    init();
+    startVoice('test-voice', 440);
+    const voice = audio.voices.get('test-voice');
+    expect(voice.gainNode.connections).toEqual([effects.filterNode]);
+    expect(effects.filterNode.connections).toContain(audio.ctx.destination);
+    expect(effects.filterNode.connections).toContain(effects.delaySend);
+    expect(effects.filterNode.connections).toContain(effects.reverbSend);
   });
 
   it('routes the delay output into the reverb so repeats are not dry', () => {

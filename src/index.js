@@ -4,11 +4,14 @@ import {
   effects,
   setDelayEnabled,
   setReverbEnabled,
+  setFilterEnabled,
   setDelayTime,
   setDelayFeedback,
   setDelaySendLevel,
   setReverbDecay,
   setReverbSendLevel,
+  setFilterCutoff,
+  setFilterResonance,
 } from './effects.js';
 import { init as initSettings } from './settings.js';
 import { init as initDegreeJoystick } from './degree-joystick.js';
@@ -81,6 +84,36 @@ wireFxDialog({
       valueEl: document.getElementById('delay-send-value'),
       format: (v) => `${Math.round(v * 100)}%`,
       onInput: setDelaySendLevel,
+    },
+  ],
+});
+
+// Cutoff is perceived logarithmically, so the slider's 0-1 travel maps to
+// frequency exponentially rather than linearly — otherwise most of the
+// track would be spent below 1kHz.
+const FILTER_CUTOFF_MIN = 150;
+const FILTER_CUTOFF_MAX = 12000;
+const sliderToCutoff = (t) => FILTER_CUTOFF_MIN * Math.pow(FILTER_CUTOFF_MAX / FILTER_CUTOFF_MIN, t);
+const formatHz = (hz) => hz >= 1000 ? `${(hz / 1000).toFixed(1)}kHz` : `${Math.round(hz)}Hz`;
+
+wireFxDialog({
+  toggleBtn: document.getElementById('filter-toggle'),
+  dialog: document.getElementById('filter-dialog'),
+  enabledCheckbox: document.getElementById('filter-enabled-checkbox'),
+  isEnabled: () => effects.filterEnabled,
+  setEnabled: setFilterEnabled,
+  sliders: [
+    {
+      slider: document.getElementById('filter-cutoff-slider'),
+      valueEl: document.getElementById('filter-cutoff-value'),
+      format: (t) => formatHz(sliderToCutoff(t)),
+      onInput: (t) => setFilterCutoff(sliderToCutoff(t)),
+    },
+    {
+      slider: document.getElementById('filter-resonance-slider'),
+      valueEl: document.getElementById('filter-resonance-value'),
+      format: (v) => v.toFixed(1),
+      onInput: setFilterResonance,
     },
   ],
 });

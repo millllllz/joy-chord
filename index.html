@@ -58,6 +58,25 @@
     </form>
   </dialog>
 
+  <dialog class="fx-dialog" id="filter-dialog">
+    <form method="dialog" class="fx-dialog-form">
+      <h2>Filter</h2>
+      <label class="fx-dialog-enable">
+        <input type="checkbox" id="filter-enabled-checkbox" checked>
+        Enabled
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Cutoff <span class="fx-dialog-value" id="filter-cutoff-value">2.5kHz</span></span>
+        <input type="range" id="filter-cutoff-slider" min="0" max="1" step="0.001" value="0.642">
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Resonance <span class="fx-dialog-value" id="filter-resonance-value">1.0</span></span>
+        <input type="range" id="filter-resonance-slider" min="0.1" max="20" step="0.1" value="1">
+      </label>
+      <button type="submit" class="fx-dialog-close">Close</button>
+    </form>
+  </dialog>
+
   <button class="fullscreen-btn" id="fullscreen-btn" aria-label="Toggle fullscreen" type="button">
     <svg id="fullscreen-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
@@ -67,7 +86,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v32</div>
+  <div class="build-version">v33</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -85,6 +104,7 @@
       <div class="fx-toggles">
         <button class="fx-toggle" id="delay-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Delay</button>
         <button class="fx-toggle" id="reverb-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Reverb</button>
+        <button class="fx-toggle" id="filter-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Filter</button>
       </div>
       <select class="key-select" id="key-select"></select>
       <select class="key-select wave-select" id="wave-select"></select>
