@@ -4,7 +4,7 @@
 const CENTER = 110;
 const R_OUTER = 100;
 const R_INNER = 40;
-const CORNER_RADIUS = 6;
+const CORNER_RADIUS = 10;
 
 function point(radius, angleDeg) {
   const a = (angleDeg * Math.PI) / 180;

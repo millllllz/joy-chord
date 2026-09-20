@@ -4,7 +4,7 @@ JoyChord is an installable PWA HiChord-inspired chord synthesizer. Web Audio API
 
 **Live:** https://millllllz.github.io/joy-chord/
 **Repo:** https://github.com/millllllz/joy-chord (public, `master` branch, deploys via GitHub Pages on push)
-**Current build:** v31 (bottom-left corner of the app; bump on every deploy, see Conventions)
+**Current build:** v32 (bottom-left corner of the app; bump on every deploy, see Conventions)
 
 ## Orientation for a new agent
 
