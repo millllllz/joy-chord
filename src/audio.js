@@ -1,3 +1,5 @@
+import { effects } from './effects.js';
+
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 
 export const audio = {
@@ -54,6 +56,8 @@ export function startVoice(id, freq) {
 
   osc.connect(gainNode);
   gainNode.connect(audio.ctx.destination);
+  gainNode.connect(effects.delaySend);
+  gainNode.connect(effects.reverbSend);
   osc.start();
 
   audio.voices.set(id, { osc, gainNode });

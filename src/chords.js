@@ -1,26 +1,41 @@
+import { wedgePath } from './wedge-geometry.js';
+
+// 7 equal 51.43deg pie slices (donut, inner r=40 outer r=100, center 110,110),
+// starting at 12 o'clock and going clockwise. Label/quality positions sit at a
+// fixed radius along each wedge's center angle.
+const DEGREE_ANGLE_STEP = 360 / 7;
+const CENTER = 110;
+const LABEL_RADIUS = 78;
+const QUALITY_RADIUS = LABEL_RADIUS + 12;
+
+function polar(radius, angleDeg) {
+  const a = (angleDeg * Math.PI) / 180;
+  return [
+    Number((CENTER + radius * Math.sin(a)).toFixed(1)),
+    Number((CENTER - radius * Math.cos(a)).toFixed(1)),
+  ];
+}
+
+function degreeWedge(index) {
+  const start = -DEGREE_ANGLE_STEP / 2 + index * DEGREE_ANGLE_STEP;
+  const end = start + DEGREE_ANGLE_STEP;
+  const center = (start + end) / 2;
+  return {
+    wedge: wedgePath(start, end),
+    labelPos: polar(LABEL_RADIUS, center),
+    qualityPos: polar(QUALITY_RADIUS, center),
+  };
+}
+
 export const chords = {
   DEGREES: [
-    { degree: 'I',    key: '1', bindKey: 'a', semitone: 0,  quality: 'major',
-      wedge: 'M 92.64 73.96 L 66.61 19.90 A 100 100 0 0 1 153.39 19.90 L 127.36 73.96 A 40 40 0 0 0 92.64 73.96 Z',
-      labelPos: [110.0, 28.0], qualityPos: [110.0, 40.0] },
-    { degree: 'ii',   key: '2', bindKey: 'w', semitone: 2,  quality: 'minor',
-      wedge: 'M 127.36 73.96 L 153.39 19.90 A 100 100 0 0 1 207.49 87.75 L 149.00 101.10 A 40 40 0 0 0 127.36 73.96 Z',
-      labelPos: [171.0, 57.4], qualityPos: [171.0, 69.4] },
-    { degree: 'iii',  key: '3', bindKey: 's', semitone: 4,  quality: 'minor',
-      wedge: 'M 149.00 101.10 L 207.49 87.75 A 100 100 0 0 1 188.18 172.35 L 141.27 134.94 A 40 40 0 0 0 149.00 101.10 Z',
-      labelPos: [186.0, 123.4], qualityPos: [186.0, 135.4] },
-    { degree: 'IV',   key: '4', bindKey: 'e', semitone: 5,  quality: 'major',
-      wedge: 'M 141.27 134.94 L 188.18 172.35 A 100 100 0 0 1 110.00 210.00 L 110.00 150.00 A 40 40 0 0 0 141.27 134.94 Z',
-      labelPos: [143.8, 176.3], qualityPos: [143.8, 188.3] },
-    { degree: 'V',    key: '5', bindKey: 'd', semitone: 7,  quality: 'major',
-      wedge: 'M 110.00 150.00 L 110.00 210.00 A 100 100 0 0 1 31.82 172.35 L 78.73 134.94 A 40 40 0 0 0 110.00 150.00 Z',
-      labelPos: [76.2, 176.3], qualityPos: [76.2, 188.3] },
-    { degree: 'vi',   key: '6', bindKey: 'r', semitone: 9,  quality: 'minor',
-      wedge: 'M 78.73 134.94 L 31.82 172.35 A 100 100 0 0 1 12.51 87.75 L 71.00 101.10 A 40 40 0 0 0 78.73 134.94 Z',
-      labelPos: [34.0, 123.4], qualityPos: [34.0, 135.4] },
-    { degree: 'vii°', key: '7', bindKey: 'f', semitone: 11, quality: 'diminished',
-      wedge: 'M 71.00 101.10 L 12.51 87.75 A 100 100 0 0 1 66.61 19.90 L 92.64 73.96 A 40 40 0 0 0 71.00 101.10 Z',
-      labelPos: [49.0, 57.4], qualityPos: [49.0, 69.4] },
+    { degree: 'I',    key: '1', bindKey: 'a', semitone: 0,  quality: 'major',    ...degreeWedge(0) },
+    { degree: 'ii',   key: '2', bindKey: 'w', semitone: 2,  quality: 'minor',    ...degreeWedge(1) },
+    { degree: 'iii',  key: '3', bindKey: 's', semitone: 4,  quality: 'minor',    ...degreeWedge(2) },
+    { degree: 'IV',   key: '4', bindKey: 'e', semitone: 5,  quality: 'major',    ...degreeWedge(3) },
+    { degree: 'V',    key: '5', bindKey: 'd', semitone: 7,  quality: 'major',    ...degreeWedge(4) },
+    { degree: 'vi',   key: '6', bindKey: 'r', semitone: 9,  quality: 'minor',    ...degreeWedge(5) },
+    { degree: 'vii°', key: '7', bindKey: 'f', semitone: 11, quality: 'diminished', ...degreeWedge(6) },
   ],
 
   BASE_TRIAD: {

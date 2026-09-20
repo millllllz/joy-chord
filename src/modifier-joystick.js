@@ -1,4 +1,5 @@
 import { degreeJoystick, setDirection } from './degree-joystick.js';
+import { wedgePath } from './wedge-geometry.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -10,11 +11,30 @@ export const modifierJoystick = {
   joyStickDot: null,
 };
 
+function svgEl(tag, attrs) {
+  const el = document.createElementNS(SVG_NS, tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+
+// 8 equal 45deg pie slices, starting at 12 o'clock and going clockwise,
+// matching this array's order.
+const MODIFIER_DIRECTIONS = ['up', 'up-right', 'right', 'down-right', 'down', 'down-left', 'left', 'up-left'];
+const MODIFIER_ANGLE_STEP = 360 / MODIFIER_DIRECTIONS.length;
+
 export function init() {
   modifierJoystick.joystickEl = document.getElementById('joystick');
   modifierJoystick.joyStickDot = document.getElementById('joy-stick-dot');
   const joyCenterCircle = document.querySelector('.joy-center');
-  const joyWedges = document.querySelectorAll('.joy-wedge');
+
+  const labelsAnchor = modifierJoystick.joystickEl.querySelector('.joy-label');
+  MODIFIER_DIRECTIONS.forEach((dir, i) => {
+    const start = -MODIFIER_ANGLE_STEP / 2 + i * MODIFIER_ANGLE_STEP;
+    const end = start + MODIFIER_ANGLE_STEP;
+    const wedgeEl = svgEl('path', { class: 'joy-wedge', 'data-dir': dir, d: wedgePath(start, end) });
+    modifierJoystick.joystickEl.insertBefore(wedgeEl, labelsAnchor);
+  });
+  const joyWedges = modifierJoystick.joystickEl.querySelectorAll('.joy-wedge');
 
   const modifierKeyToDir = {
     // Interleaved clockwise from top: odds (jkl;) home row, evens (iop[) top row

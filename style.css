@@ -156,6 +156,7 @@
     fill: var(--wedge-fill);
     stroke: var(--wedge-stroke);
     stroke-width: 1;
+    stroke-linejoin: round;
     transition: fill 0.1s ease;
   }
   .joy-wedge.active {
