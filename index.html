@@ -154,6 +154,7 @@
     font-size: 8.5px;
     font-weight: 700;
     letter-spacing: 0.03em;
+    text-transform: uppercase;
     fill: var(--muted);
     pointer-events: none;
     transition: fill 0.1s ease;
@@ -167,7 +168,8 @@
     stroke-width: 1;
     cursor: pointer;
   }
-  .joy-center-label {
+  .joy-center-label,
+  .degree-center-label {
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -175,6 +177,9 @@
     text-anchor: middle;
     dominant-baseline: middle;
     pointer-events: none;
+  }
+  .joy-center-label {
+    text-transform: uppercase;
   }
 
   /* The stick "dot": a knob that tracks the raw pointer/touch position
@@ -380,7 +385,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v22</div>
+  <div class="build-version">v23</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -715,6 +720,25 @@
     return el;
   }
 
+  // Sets a wedge <text>'s content, splitting on "/" into two stacked lines
+  // (e.g. "Maj/Min" -> "Maj" over "Min") since SVG text doesn't wrap on its
+  // own and these compound labels are too wide for one line at wedge scale.
+  // Single-word labels (no "/") are set as plain text, unchanged.
+  function setWedgeLabel(el, text) {
+    const parts = text.split('/');
+    if (parts.length === 1) {
+      el.textContent = text;
+      return;
+    }
+    el.textContent = '';
+    const x = el.getAttribute('x');
+    parts.forEach((part, i) => {
+      const tspan = svgEl('tspan', { x, dy: i === 0 ? '-0.35em' : '1em' });
+      tspan.textContent = part;
+      el.appendChild(tspan);
+    });
+  }
+
   // Both joysticks share the same 220x220 viewBox and center point, so the
   // stick-dot math below is hardcoded to it rather than parametrized.
   const STICK_CENTER = 110;
@@ -774,7 +798,7 @@
 
   const degreeCenterCircle = svgEl('circle', { class: 'joy-center', cx: 110, cy: 110, r: 40, fill: 'url(#degreeCenterGradient)' });
   degreeJoystickEl.appendChild(degreeCenterCircle);
-  const degreeCenterLabel = svgEl('text', { class: 'joy-center-label', x: 110, y: 110 });
+  const degreeCenterLabel = svgEl('text', { class: 'degree-center-label', x: 110, y: 110 });
   degreeJoystickEl.appendChild(degreeCenterLabel);
 
   // Stick dot for mouse (a single persistent element, since a mouse is one
@@ -1052,7 +1076,7 @@
   function updateQualityWedgeLabels() {
     const quality = soleHeldQuality();
     Object.entries(qualityWedgeLabels).forEach(([direction, el]) => {
-      el.textContent = quality ? qualityLabel(direction, quality) : QUALITY_WEDGE_DEFAULTS[direction];
+      setWedgeLabel(el, quality ? qualityLabel(direction, quality) : QUALITY_WEDGE_DEFAULTS[direction]);
     });
   }
 
@@ -1231,6 +1255,11 @@
   } else {
     debugLog('serviceWorker not supported');
   }
+
+  // Convert the quality-dependent wedges' static markup text into the same
+  // two-line "/" split the dynamic updates use, so it's consistent from
+  // first paint instead of only after the first press.
+  updateQualityWedgeLabels();
 </script>
 </body>
 </html>
