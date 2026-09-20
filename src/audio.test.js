@@ -4,8 +4,10 @@ import {
   noteFreq,
   setWaveType,
   startVoice,
+  stopVoice,
   setGlideEnabled,
   setGlideTime,
+  setGlideEdgesEnabled,
   glideVoice,
   reconcileVoices,
 } from './audio.js';
@@ -17,6 +19,7 @@ describe('audio module', () => {
     audio.currentWaveType = 'sine';
     audio.glideEnabled = false;
     audio.GLIDE_TIME = 0.12;
+    audio.glideEdgesEnabled = false;
   });
 
   it('has constants defined', () => {
@@ -34,6 +37,12 @@ describe('audio module', () => {
     expect(audio.glideEnabled).toBe(true);
     setGlideTime(0.25);
     expect(audio.GLIDE_TIME).toBe(0.25);
+  });
+
+  it('defaults glide-edges off and allows toggling it', () => {
+    expect(audio.glideEdgesEnabled).toBe(false);
+    setGlideEdgesEnabled(true);
+    expect(audio.glideEdgesEnabled).toBe(true);
   });
 
   it('calculates note frequency correctly from semitones', () => {
@@ -70,6 +79,51 @@ describe('audio module', () => {
     startVoice('b', 550);
     setWaveType('triangle');
     expect([...audio.voices.values()].map(v => v.osc.type)).toEqual(['triangle', 'triangle']);
+  });
+
+  describe('startVoice glide-in', () => {
+    it('sets glideFromFreq first, then ramps to the target', () => {
+      startVoice('a', 550, 300);
+      const calls = audio.voices.get('a').osc.frequency.calls;
+      expect(calls).toEqual([
+        { method: 'setValueAtTime', value: 300, time: 0 },
+        { method: 'linearRampToValueAtTime', value: 550, time: audio.GLIDE_TIME },
+      ]);
+    });
+
+    it('sets the target directly, with no ramp, when no glideFromFreq is given', () => {
+      startVoice('a', 550);
+      const calls = audio.voices.get('a').osc.frequency.calls;
+      expect(calls).toEqual([{ method: 'setValueAtTime', value: 550, time: 0 }]);
+    });
+  });
+
+  describe('stopVoice glide-out', () => {
+    it('ramps the oscillator toward glideToFreq, stretching the release to match GLIDE_TIME', () => {
+      startVoice('a', 440);
+      const voice = audio.voices.get('a');
+      stopVoice('a', 660);
+      expect(audio.voices.has('a')).toBe(false);
+      // The RELEASE constant (0.08s) is shorter than the default GLIDE_TIME
+      // (0.12s) — glide-out should win so the pitch actually gets there
+      // before the voice goes silent, not cut off mid-slide.
+      const freqCalls = voice.osc.frequency.calls;
+      expect(freqCalls[freqCalls.length - 1]).toEqual({
+        method: 'linearRampToValueAtTime', value: 660, time: audio.GLIDE_TIME,
+      });
+      const gainCalls = voice.gainNode.gain.calls;
+      expect(gainCalls[gainCalls.length - 1]).toEqual({
+        method: 'linearRampToValueAtTime', value: 0, time: audio.GLIDE_TIME,
+      });
+    });
+
+    it('does not touch frequency when no glideToFreq is given', () => {
+      startVoice('a', 440);
+      const osc = audio.voices.get('a').osc;
+      const freqCallsBefore = osc.frequency.calls.length;
+      stopVoice('a');
+      expect(osc.frequency.calls.length).toBe(freqCallsBefore);
+    });
   });
 
   describe('glideVoice', () => {
@@ -138,6 +192,73 @@ describe('audio module', () => {
       expect(audio.voices.get('third').osc.frequency.value).toBe(550);
       expect(audio.voices.get('fifth').osc.frequency.value).toBe(660);
       expect(audio.voices.size).toBe(3);
+    });
+
+    it('does not leak the forEach array index into stopVoice as glideToFreq when edges are off', () => {
+      // staleIds.forEach(id => stopVoice(id)) must stay explicit — passing
+      // stopVoice directly to forEach would leak the index as a 2nd arg.
+      setGlideEnabled(true);
+      startVoice('a', 440);
+      startVoice('b', 550);
+      startVoice('c', 660);
+      const bVoice = audio.voices.get('b');
+      reconcileVoices(
+        new Map([['a', 440], ['b', 550], ['c', 660]]),
+        new Map(), // everything stale, nothing fresh - no pairs possible
+      );
+      // 'b' is index 1 in the sorted stale list; if the index leaked in as
+      // glideToFreq, its oscillator would have been reprogrammed toward 1.
+      const freqCalls = bVoice.osc.frequency.calls;
+      expect(freqCalls.some(c => c.value === 1)).toBe(false);
+    });
+
+    describe('with glideEdgesEnabled', () => {
+      beforeEach(() => {
+        setGlideEnabled(true);
+        setGlideEdgesEnabled(true);
+      });
+
+      it('glides a purely-added tone in from the nearest surviving tone', () => {
+        startVoice('root', 440);
+        startVoice('fifth', 660);
+        reconcileVoices(
+          new Map([['root', 440], ['fifth', 660]]),
+          new Map([['root', 440], ['fifth', 660], ['seventh', 700]]),
+        );
+        // Nothing to pair with (root/fifth are untouched, not stale) — the
+        // added 'seventh' should glide in from its nearest neighbor (700 is
+        // closer to 660 than to 440).
+        const calls = audio.voices.get('seventh').osc.frequency.calls;
+        expect(calls[0]).toEqual({ method: 'setValueAtTime', value: 660, time: 0 });
+        expect(calls[1]).toEqual({ method: 'linearRampToValueAtTime', value: 700, time: audio.GLIDE_TIME });
+      });
+
+      it('glides a purely-removed tone out toward the nearest surviving tone', () => {
+        startVoice('root', 440);
+        startVoice('fifth', 660);
+        startVoice('seventh', 700);
+        const seventhVoice = audio.voices.get('seventh');
+        reconcileVoices(
+          new Map([['root', 440], ['fifth', 660], ['seventh', 700]]),
+          new Map([['root', 440], ['fifth', 660]]),
+        );
+        expect(audio.voices.has('seventh')).toBe(false);
+        const freqCalls = seventhVoice.osc.frequency.calls;
+        expect(freqCalls[freqCalls.length - 1]).toEqual({
+          method: 'linearRampToValueAtTime', value: 660, time: audio.GLIDE_TIME,
+        });
+      });
+
+      it('still uses hard start/stop for the surplus when edges are off', () => {
+        setGlideEdgesEnabled(false);
+        startVoice('root', 440);
+        reconcileVoices(
+          new Map([['root', 440]]),
+          new Map([['root', 440], ['seventh', 700]]),
+        );
+        const calls = audio.voices.get('seventh').osc.frequency.calls;
+        expect(calls).toEqual([{ method: 'setValueAtTime', value: 700, time: 0 }]);
+      });
     });
   });
 });

@@ -10,6 +10,11 @@ export const audio = {
   currentWaveType: 'sine',
   glideEnabled: false,
   GLIDE_TIME: 0.12,
+  // Sub-option of glide, only meaningful while glideEnabled is also true:
+  // extends gliding to voices with no pairing partner (a chord tone purely
+  // added or removed, not replaced) by having them glide to/from the
+  // nearest surviving chord tone instead of attacking/releasing in place.
+  glideEdgesEnabled: false,
 };
 
 export function init() {
@@ -41,7 +46,11 @@ export function createReverbImpulse() {
   return impulse;
 }
 
-export function startVoice(id, freq) {
+// `glideFromFreq`, if given, is an edges-glide starting pitch (see
+// reconcileVoices): the oscillator starts there and ramps to `freq` over
+// GLIDE_TIME instead of starting directly at `freq`, so a newly-added chord
+// tone can slide in from a neighboring one rather than just attacking cold.
+export function startVoice(id, freq, glideFromFreq) {
   init();
   if (audio.voices.has(id)) return;
 
@@ -49,12 +58,18 @@ export function startVoice(id, freq) {
   const gainNode = audio.ctx.createGain();
 
   osc.type = audio.currentWaveType;
-  osc.frequency.setValueAtTime(freq, audio.ctx.currentTime);
+  const now = audio.ctx.currentTime;
+  if (glideFromFreq != null) {
+    osc.frequency.setValueAtTime(glideFromFreq, now);
+    osc.frequency.linearRampToValueAtTime(freq, now + audio.GLIDE_TIME);
+  } else {
+    osc.frequency.setValueAtTime(freq, now);
+  }
 
   const ATTACK = 0.01;
   const GAIN = 0.15;
-  gainNode.gain.setValueAtTime(0, audio.ctx.currentTime);
-  gainNode.gain.linearRampToValueAtTime(GAIN, audio.ctx.currentTime + ATTACK);
+  gainNode.gain.setValueAtTime(0, now);
+  gainNode.gain.linearRampToValueAtTime(GAIN, now + ATTACK);
 
   osc.connect(gainNode);
   gainNode.connect(effects.filterNode);
@@ -63,16 +78,30 @@ export function startVoice(id, freq) {
   audio.voices.set(id, { osc, gainNode });
 }
 
-export function stopVoice(id) {
+// `glideToFreq`, if given, is an edges-glide target pitch: the oscillator
+// ramps toward it (stretching the release to match GLIDE_TIME so the pitch
+// actually gets there before the voice is silent) instead of releasing at
+// its current pitch, so a departing chord tone can slide toward a
+// neighboring one rather than just cutting off in place.
+export function stopVoice(id, glideToFreq) {
   const voice = audio.voices.get(id);
   if (!voice) return;
   const { osc, gainNode } = voice;
   const now = audio.ctx.currentTime;
   const RELEASE = 0.08;
+  const duration = glideToFreq != null ? Math.max(RELEASE, audio.GLIDE_TIME) : RELEASE;
+
   gainNode.gain.cancelScheduledValues(now);
   gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-  gainNode.gain.linearRampToValueAtTime(0, now + RELEASE);
-  osc.stop(now + RELEASE + 0.02);
+  gainNode.gain.linearRampToValueAtTime(0, now + duration);
+
+  if (glideToFreq != null) {
+    osc.frequency.cancelScheduledValues(now);
+    osc.frequency.setValueAtTime(osc.frequency.value, now);
+    osc.frequency.linearRampToValueAtTime(glideToFreq, now + duration);
+  }
+
+  osc.stop(now + duration + 0.02);
 
   audio.voices.delete(id);
 }
@@ -90,6 +119,19 @@ export function setGlideEnabled(enabled) {
 
 export function setGlideTime(seconds) {
   audio.GLIDE_TIME = seconds;
+}
+
+export function setGlideEdgesEnabled(enabled) {
+  audio.glideEdgesEnabled = enabled;
+}
+
+// The closest value in `candidates` to `target`, or `target` itself (a
+// zero-distance, effectively-no-op glide) if there's nothing to compare
+// against — a chord always has at least a root in practice, but this keeps
+// the edges-glide callers safe rather than assuming a non-empty list.
+function nearestFreq(candidates, target) {
+  if (candidates.length === 0) return target;
+  return candidates.reduce((best, f) => (Math.abs(f - target) < Math.abs(best - target) ? f : best));
 }
 
 // Slides an existing, still-sounding voice to a new pitch/id instead of
@@ -118,14 +160,18 @@ export function glideVoice(oldId, newId, newFreq) {
 // (startVoice no-ops on an existing id). The rest — ids only in oldTarget
 // ("stale") and only in newTarget ("fresh") — are either hard
 // stopped/started, or, with glide on, paired off nearest-pitch-to-
-// nearest-pitch and glided; any surplus on the longer side (the chord grew
-// or shrank) still hard starts/stops since it has no pairing partner.
+// nearest-pitch and glided. Any surplus on the longer side (the chord grew
+// or shrank) has no pairing partner: normally that still hard starts/stops
+// it, but with glideEdgesEnabled on, it instead glides to/from the nearest
+// tone that will actually survive the transition — a fresh tone eases in
+// from a neighbor instead of attacking cold, a stale one eases out toward
+// one instead of cutting off in place.
 export function reconcileVoices(oldTarget, newTarget) {
   const staleIds = [...oldTarget.keys()].filter(id => !newTarget.has(id));
   const freshIds = [...newTarget.keys()].filter(id => !oldTarget.has(id));
 
   if (!audio.glideEnabled) {
-    staleIds.forEach(stopVoice);
+    staleIds.forEach(id => stopVoice(id));
     freshIds.forEach(id => startVoice(id, newTarget.get(id)));
     return;
   }
@@ -136,6 +182,23 @@ export function reconcileVoices(oldTarget, newTarget) {
   for (let i = 0; i < pairCount; i++) {
     glideVoice(staleIds[i], freshIds[i], newTarget.get(freshIds[i]));
   }
-  staleIds.slice(pairCount).forEach(stopVoice);
-  freshIds.slice(pairCount).forEach(id => startVoice(id, newTarget.get(id)));
+
+  const leftoverStale = staleIds.slice(pairCount);
+  const leftoverFresh = freshIds.slice(pairCount);
+
+  if (!audio.glideEdgesEnabled) {
+    leftoverStale.forEach(id => stopVoice(id));
+    leftoverFresh.forEach(id => startVoice(id, newTarget.get(id)));
+    return;
+  }
+
+  const finalFreqs = [...newTarget.values()];
+  leftoverStale.forEach(id => {
+    stopVoice(id, nearestFreq(finalFreqs, oldTarget.get(id)));
+  });
+  leftoverFresh.forEach(id => {
+    const freq = newTarget.get(id);
+    const others = [...newTarget.entries()].filter(([otherId]) => otherId !== id).map(([, f]) => f);
+    startVoice(id, freq, nearestFreq(others, freq));
+  });
 }

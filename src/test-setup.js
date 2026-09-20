@@ -79,17 +79,26 @@ class MockOscillator extends MockAudioNode {
 class MockAudioParam {
   constructor() {
     this.value = 0;
+    // Recorded so tests can assert the sequence of calls (e.g. a glide's
+    // starting value before its ramp), not just the final .value — which
+    // method won last is otherwise indistinguishable from having only ever
+    // been set once.
+    this.calls = [];
   }
 
   setValueAtTime(value, time) {
     this.value = value;
+    this.calls.push({ method: 'setValueAtTime', value, time });
   }
 
   linearRampToValueAtTime(value, time) {
     this.value = value;
+    this.calls.push({ method: 'linearRampToValueAtTime', value, time });
   }
 
-  cancelScheduledValues(time) {}
+  cancelScheduledValues(time) {
+    this.calls.push({ method: 'cancelScheduledValues', time });
+  }
 }
 
 // Mock document APIs
