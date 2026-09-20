@@ -26,8 +26,6 @@ export function init() {
 
   degreeJoystick.degreeJoystickEl = document.getElementById('degree-joystick');
 
-  const STICK_CENTER = 110;
-
   // Render wedges and labels
   chords.DEGREES.forEach(d => {
     const wedgeEl = svgEl('path', { class: 'wedge degree-wedge', 'data-key': d.key, d: d.wedge });
@@ -49,21 +47,17 @@ export function init() {
     d.qualityEl = qualityEl;
   });
 
-  const degreeCenterCircle = svgEl('circle', { class: 'joy-center', cx: 110, cy: 110, r: 40, fill: 'url(#degreeCenterGradient)' });
-  degreeJoystick.degreeJoystickEl.appendChild(degreeCenterCircle);
+  const degreeCenterCircle = document.getElementById('degree-center');
   // Mouse has no discrete "release" event of its own — this is its
   // equivalent of the touch "lift while at center" reset gesture. Safe to
   // fire unconditionally: with Hold off, the per-wedge mouseleave below has
   // already released everything by the time the mouse reaches here, so
   // this is a harmless no-op in that mode.
   degreeCenterCircle.addEventListener('mouseenter', () => releaseAllHeld());
-  const degreeCenterLabel = svgEl('text', { class: 'degree-center-label', x: 110, y: 110 });
-  degreeJoystick.degreeJoystickEl.appendChild(degreeCenterLabel);
 
   // One dot, shared by mouse and touch, resting visibly at centre when
   // nothing is driving it — the stick's neutral position.
-  degreeJoystick.degreeStickDot = svgEl('circle', { class: 'stick-dot', cx: 110, cy: 110, r: 14 });
-  degreeJoystick.degreeJoystickEl.appendChild(degreeJoystick.degreeStickDot);
+  degreeJoystick.degreeStickDot = document.getElementById('degree-stick-dot');
 
   // Mouse interaction
   chords.DEGREES.forEach(d => {
