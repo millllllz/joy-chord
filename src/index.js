@@ -16,9 +16,9 @@ import {
   setTremoloRate,
   setTremoloDepth,
 } from './effects.js';
-import { init as initSettings } from './settings.js';
-import { init as initDegreeJoystick } from './degree-joystick.js';
-import { init as initModifierJoystick } from './modifier-joystick.js';
+import { init as initSettings, settings, setHoldEnabled } from './settings.js';
+import { init as initDegreeJoystick, releaseAllHeld } from './degree-joystick.js';
+import { init as initModifierJoystick, setJoyDirection } from './modifier-joystick.js';
 import { init as initDebug, debugLog } from './debug.js';
 import { init as initFullscreen } from './fullscreen.js';
 
@@ -183,6 +183,25 @@ wireFxDialog({
       onInput: setReverbSendLevel,
     },
   ],
+});
+
+// Hold has no adjustable parameter, so it's a direct click-toggle rather
+// than a dialog like the others. Both joysticks read settings.holdEnabled
+// directly in their own event handlers to decide whether a release
+// actually stops the note/modifier; this button just flips that flag and,
+// on the way off, force-releases anything currently latched — the only
+// reset keyboard play has, since it has no "drag to center" gesture of
+// its own.
+const holdToggleBtn = document.getElementById('hold-toggle');
+holdToggleBtn.addEventListener('click', () => {
+  const enabled = !settings.holdEnabled;
+  setHoldEnabled(enabled);
+  holdToggleBtn.classList.toggle('active', enabled);
+  holdToggleBtn.setAttribute('aria-pressed', String(enabled));
+  if (!enabled) {
+    releaseAllHeld();
+    setJoyDirection('center');
+  }
 });
 
 // Initialize UI

@@ -1,6 +1,7 @@
 import { degreeJoystick, setDirection } from './degree-joystick.js';
 import { wedgePath } from './wedge-geometry.js';
 import { chords, qualityLabel } from './chords.js';
+import { settings } from './settings.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -115,8 +116,14 @@ export function init() {
     wedge.addEventListener('mouseenter', () => setJoyDirection(wedge.dataset.dir));
   });
 
+  // The center circle is the reset gesture regardless of Hold — mouse has
+  // no discrete "release" event, so entering it is as close as mouse gets
+  // to the touch "lift while at center" gesture.
   joyCenterCircle.addEventListener('mouseenter', () => setJoyDirection('center'));
-  modifierJoystick.joystickEl.addEventListener('mouseleave', () => setJoyDirection('center'));
+  modifierJoystick.joystickEl.addEventListener('mouseleave', () => {
+    if (settings.holdEnabled) return;
+    setJoyDirection('center');
+  });
 
   modifierJoystick.joystickEl.addEventListener('mousemove', (e) => {
     moveStickDot(modifierJoystick.joyStickDot, modifierJoystick.joystickEl, e.clientX, e.clientY);
@@ -136,12 +143,18 @@ export function init() {
     const key = e.key.toLowerCase();
     if (!(key in modifierKeyToDir)) return;
     modifierJoystick.heldModifierKeys.delete(key);
-    if (modifierJoystick.heldModifierKeys.size === 0) {
-      setJoyDirection('center');
-    } else {
+    if (modifierJoystick.heldModifierKeys.size > 0) {
+      // A second modifier key is still down — always switch to it, hold or
+      // not; this is a selection, not a release to nothing.
       const remaining = [...modifierJoystick.heldModifierKeys][0];
       setJoyDirection(modifierKeyToDir[remaining]);
+      return;
     }
+    // No modifier key left down. Keyboard has no "drag to center" gesture,
+    // so with Hold on the last direction just latches — turning Hold off
+    // (see index.js) resets it.
+    if (settings.holdEnabled) return;
+    setJoyDirection('center');
   });
 
   // Touch interaction
@@ -152,7 +165,11 @@ export function init() {
     modifierJoystick.modifierTouchId = touch.identifier;
     moveStickDot(modifierJoystick.joyStickDot, modifierJoystick.joystickEl, touch.clientX, touch.clientY);
     const dir = directionAtPoint(touch.clientX, touch.clientY);
-    if (dir) setJoyDirection(dir);
+    if (!dir) return;
+    // Landing on center at touchdown doesn't reset while Hold is on — only
+    // an actual lift there does (endModifierTouch below).
+    if (dir === 'center' && settings.holdEnabled) return;
+    setJoyDirection(dir);
   }, { passive: false });
 
   modifierJoystick.joystickEl.addEventListener('touchmove', (e) => {
@@ -169,7 +186,11 @@ export function init() {
     // without glide (an extra near-instant stop/start), but with glide on
     // it corrupted a single clean slide into two — reconcile back toward
     // center, then immediately back out — which reads as glide not working.
-    if (dir) setJoyDirection(dir);
+    if (!dir) return;
+    // With Hold on, merely dragging onto/through center doesn't reset
+    // either — only a lift while there does (endModifierTouch below).
+    if (dir === 'center' && settings.holdEnabled) return;
+    setJoyDirection(dir);
   }, { passive: false });
 
   const endModifierTouch = (e) => {
@@ -178,6 +199,10 @@ export function init() {
     e.preventDefault();
     modifierJoystick.modifierTouchId = null;
     resetStickDot(modifierJoystick.joyStickDot);
+    // With Hold on, only reset if the finger was actually at the center
+    // circle at the moment of lift — the deliberate reset gesture. Lifting
+    // anywhere else (a wedge, the gap, or off the pad) leaves it latched.
+    if (settings.holdEnabled && directionAtPoint(touch.clientX, touch.clientY) !== 'center') return;
     setJoyDirection('center');
   };
   modifierJoystick.joystickEl.addEventListener('touchend', endModifierTouch, { passive: false });
@@ -217,7 +242,11 @@ function directionAtPoint(x, y) {
   const el = document.elementFromPoint(x, y);
   if (!el) return null;
   if (el.classList.contains('joy-wedge')) return el.dataset.dir;
-  if (el.classList.contains('joy-center') && el === document.querySelector('.joy-center')) return 'center';
+  // Scoped to this stick's own element — the degree stick has a same-classed
+  // .joy-center circle too, and an unscoped document.querySelector('.joy-center')
+  // returns whichever one comes first in the document (the degree stick's,
+  // since it's placed before this one), silently never matching here.
+  if (el.classList.contains('joy-center') && el === modifierJoystick.joystickEl.querySelector('.joy-center')) return 'center';
   return null;
 }
 

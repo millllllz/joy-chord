@@ -5,6 +5,9 @@ export const settings = {
   currentKeyRoot: 0,
   KEY_NAMES: chords.KEY_NAMES,
   WAVE_TYPES: chords.WAVE_TYPES,
+  // When on, both joysticks latch on release instead of stopping — see
+  // degree-joystick.js/modifier-joystick.js for where this is read.
+  holdEnabled: false,
 };
 
 export function init() {
@@ -37,4 +40,8 @@ export function setKeyRoot(root) {
   if (root === settings.currentKeyRoot) return;
   settings.currentKeyRoot = root;
   // Re-voicing handled by caller
+}
+
+export function setHoldEnabled(enabled) {
+  settings.holdEnabled = enabled;
 }

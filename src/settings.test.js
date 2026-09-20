@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { settings, setKeyRoot } from './settings.js';
+import { settings, setKeyRoot, setHoldEnabled } from './settings.js';
 
 describe('settings module', () => {
   beforeEach(() => {
     settings.currentKeyRoot = 0;
+    settings.holdEnabled = false;
   });
 
   it('tracks current key root', () => {
@@ -28,5 +29,13 @@ describe('settings module', () => {
     expect(settings.WAVE_TYPES).toContain('square');
     expect(settings.WAVE_TYPES).toContain('sawtooth');
     expect(settings.WAVE_TYPES).toContain('triangle');
+  });
+
+  it('defaults hold off and allows toggling it', () => {
+    expect(settings.holdEnabled).toBe(false);
+    setHoldEnabled(true);
+    expect(settings.holdEnabled).toBe(true);
+    setHoldEnabled(false);
+    expect(settings.holdEnabled).toBe(false);
   });
 });

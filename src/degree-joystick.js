@@ -51,6 +51,12 @@ export function init() {
 
   const degreeCenterCircle = svgEl('circle', { class: 'joy-center', cx: 110, cy: 110, r: 40, fill: 'url(#degreeCenterGradient)' });
   degreeJoystick.degreeJoystickEl.appendChild(degreeCenterCircle);
+  // Mouse has no discrete "release" event of its own — this is its
+  // equivalent of the touch "lift while at center" reset gesture. Safe to
+  // fire unconditionally: with Hold off, the per-wedge mouseleave below has
+  // already released everything by the time the mouse reaches here, so
+  // this is a harmless no-op in that mode.
+  degreeCenterCircle.addEventListener('mouseenter', () => releaseAllHeld());
   const degreeCenterLabel = svgEl('text', { class: 'degree-center-label', x: 110, y: 110 });
   degreeJoystick.degreeJoystickEl.appendChild(degreeCenterLabel);
 
@@ -62,7 +68,12 @@ export function init() {
   // Mouse interaction
   chords.DEGREES.forEach(d => {
     d.wedgeEl.addEventListener('mouseenter', () => pressDegree(d));
-    d.wedgeEl.addEventListener('mouseleave', () => releaseDegree(d));
+    d.wedgeEl.addEventListener('mouseleave', () => {
+      // Latches while Hold is on — only entering the center circle (above)
+      // or the joystick going out of use for keyboard/touch resets it.
+      if (settings.holdEnabled) return;
+      releaseDegree(d);
+    });
   });
 
   degreeJoystick.degreeJoystickEl.addEventListener('mousemove', (e) => {
@@ -118,10 +129,14 @@ export function init() {
     // matters most for.
     const isDeadCenter = el && el.classList && el.classList.contains('joy-center');
     const isOffPad = !el || !el.closest || !el.closest('#degree-joystick');
-    if (currentKey && (isDeadCenter || isOffPad)) {
-      releaseDegree(degreeJoystick.degreeByKey.get(currentKey));
-      degreeJoystick.touchedDegreeKey = null;
-    }
+    if (!currentKey || !(isDeadCenter || isOffPad)) return;
+    // With Hold on, only an explicit lift *at* the center circle resets
+    // (handled in endDegreeTouch below) — merely dragging through center
+    // or off the pad mid-move keeps the note latched, per the same
+    // reasoning as the gap: it's not the deliberate reset gesture.
+    if (settings.holdEnabled) return;
+    releaseDegree(degreeJoystick.degreeByKey.get(currentKey));
+    degreeJoystick.touchedDegreeKey = null;
   }, { passive: false });
 
   const endDegreeTouch = (e) => {
@@ -133,6 +148,15 @@ export function init() {
 
     const key = degreeJoystick.touchedDegreeKey;
     if (!key) return;
+    // With Hold on, lifting only resets if the finger was actually AT the
+    // center circle at that moment — the deliberate "intentional reset"
+    // gesture. Lifting anywhere else (on a wedge, in a gap, or off the
+    // pad) leaves the note latched.
+    if (settings.holdEnabled) {
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const isDeadCenter = el && el.classList && el.classList.contains('joy-center');
+      if (!isDeadCenter) return;
+    }
     releaseDegree(degreeJoystick.degreeByKey.get(key));
     degreeJoystick.touchedDegreeKey = null;
   };
@@ -150,6 +174,9 @@ export function init() {
   window.addEventListener('keyup', (e) => {
     const d = degreeJoystick.degreeByBindKey.get(e.key.toLowerCase()) || degreeJoystick.degreeByKey.get(e.key);
     if (!d) return;
+    // Keyboard has no "drag to center" gesture, so with Hold on it just
+    // latches — turning Hold off (see index.js) is what resets it.
+    if (settings.holdEnabled) return;
     releaseDegree(d);
   });
 }
@@ -268,6 +295,16 @@ function releaseDegree(d) {
   (degreeJoystick.heldVoices.get(d.key) || new Set()).forEach(id => stopVoice(id));
   clearDegreeState(d);
   updateQualityWedgeLabels();
+}
+
+// Unconditionally releases whatever's currently held, bypassing Hold —
+// used both by the mouse's center-circle gesture (see init()) and by
+// index.js when Hold itself is switched off, which is the only reset
+// gesture keyboard play has while latched.
+export function releaseAllHeld() {
+  [...degreeJoystick.heldDegrees.keys()].forEach(key => {
+    releaseDegree(degreeJoystick.degreeByKey.get(key));
+  });
 }
 
 export function setDirection(direction) {
