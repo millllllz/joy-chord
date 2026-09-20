@@ -15,6 +15,15 @@ export const audio = {
   // added or removed, not replaced) by having them glide to/from the
   // nearest surviving chord tone instead of attacking/releasing in place.
   glideEdgesEnabled: true,
+  // Basic ADSR — always active (not an optional effect, so no *Enabled
+  // flag): every voice's gain ramps 0 -> peak over ATTACK, then
+  // peak -> peak*SUSTAIN over DECAY, then holds there until released,
+  // at which point it ramps from wherever it currently is (attack/decay
+  // mid-ramp or already at sustain) down to 0 over RELEASE.
+  ENVELOPE_ATTACK: 0.01,
+  ENVELOPE_DECAY: 0.1,
+  ENVELOPE_SUSTAIN: 0.7,
+  ENVELOPE_RELEASE: 0.08,
 };
 
 export function init() {
@@ -66,10 +75,11 @@ export function startVoice(id, freq, glideFromFreq) {
     osc.frequency.setValueAtTime(freq, now);
   }
 
-  const ATTACK = 0.01;
-  const GAIN = 0.15;
+  const PEAK_GAIN = 0.15;
+  const sustainLevel = PEAK_GAIN * audio.ENVELOPE_SUSTAIN;
   gainNode.gain.setValueAtTime(0, now);
-  gainNode.gain.linearRampToValueAtTime(GAIN, now + ATTACK);
+  gainNode.gain.linearRampToValueAtTime(PEAK_GAIN, now + audio.ENVELOPE_ATTACK);
+  gainNode.gain.linearRampToValueAtTime(sustainLevel, now + audio.ENVELOPE_ATTACK + audio.ENVELOPE_DECAY);
 
   osc.connect(gainNode);
   gainNode.connect(effects.filterNode);
@@ -88,8 +98,7 @@ export function stopVoice(id, glideToFreq) {
   if (!voice) return;
   const { osc, gainNode } = voice;
   const now = audio.ctx.currentTime;
-  const RELEASE = 0.08;
-  const duration = glideToFreq != null ? Math.max(RELEASE, audio.GLIDE_TIME) : RELEASE;
+  const duration = glideToFreq != null ? Math.max(audio.ENVELOPE_RELEASE, audio.GLIDE_TIME) : audio.ENVELOPE_RELEASE;
 
   gainNode.gain.cancelScheduledValues(now);
   gainNode.gain.setValueAtTime(gainNode.gain.value, now);
@@ -123,6 +132,22 @@ export function setGlideTime(seconds) {
 
 export function setGlideEdgesEnabled(enabled) {
   audio.glideEdgesEnabled = enabled;
+}
+
+export function setEnvelopeAttack(seconds) {
+  audio.ENVELOPE_ATTACK = seconds;
+}
+
+export function setEnvelopeDecay(seconds) {
+  audio.ENVELOPE_DECAY = seconds;
+}
+
+export function setEnvelopeSustain(level) {
+  audio.ENVELOPE_SUSTAIN = level;
+}
+
+export function setEnvelopeRelease(seconds) {
+  audio.ENVELOPE_RELEASE = seconds;
 }
 
 // The closest value in `candidates` to `target`, or `target` itself (a

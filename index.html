@@ -115,6 +115,29 @@
     </form>
   </dialog>
 
+  <dialog class="fx-dialog" id="envelope-dialog">
+    <form method="dialog" class="fx-dialog-form">
+      <h2>Envelope</h2>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Attack <span class="fx-dialog-value" id="envelope-attack-value">10ms</span></span>
+        <input type="range" id="envelope-attack-slider" min="0.001" max="0.5" step="0.001" value="0.01">
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Decay <span class="fx-dialog-value" id="envelope-decay-value">100ms</span></span>
+        <input type="range" id="envelope-decay-slider" min="0" max="1" step="0.01" value="0.1">
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Sustain <span class="fx-dialog-value" id="envelope-sustain-value">70%</span></span>
+        <input type="range" id="envelope-sustain-slider" min="0" max="1" step="0.01" value="0.7">
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Release <span class="fx-dialog-value" id="envelope-release-value">80ms</span></span>
+        <input type="range" id="envelope-release-slider" min="0.01" max="1" step="0.01" value="0.08">
+      </label>
+      <button type="submit" class="fx-dialog-close">Close</button>
+    </form>
+  </dialog>
+
   <button class="fullscreen-btn" id="fullscreen-btn" aria-label="Toggle fullscreen" type="button">
     <svg id="fullscreen-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
@@ -124,7 +147,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v43</div>
+  <div class="build-version">v44</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -152,6 +175,7 @@
           <button class="fx-toggle" id="tremolo-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Tremolo</button>
           <button class="fx-toggle" id="glide-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Glide</button>
           <button class="fx-toggle" id="hold-toggle" type="button" aria-pressed="false">Hold</button>
+          <button class="fx-toggle" id="envelope-toggle" type="button" aria-haspopup="dialog">Env</button>
         </div>
         <div class="sound-controls">
           <span class="controls-group-label">Sound</span>

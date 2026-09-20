@@ -4,7 +4,7 @@ JoyChord is an installable PWA HiChord-inspired chord synthesizer. Web Audio API
 
 **Live:** https://millllllz.github.io/joy-chord/
 **Repo:** https://github.com/millllllz/joy-chord (public, `master` branch, deploys via GitHub Pages on push)
-**Current build:** v43 (bottom-left corner of the app; bump on every deploy, see Conventions)
+**Current build:** v44 (bottom-left corner of the app; bump on every deploy, see Conventions)
 
 ## Orientation for a new agent
 
@@ -58,6 +58,8 @@ Both joysticks' `touchmove` handlers specifically treat the narrow gap between a
 
 Building this surfaced a real, previously-invisible bug in `modifier-joystick.js`'s `directionAtPoint()`: its center-circle check compared the hit element against an unscoped `document.querySelector('.joy-center')`, which — since both sticks' center circles share that class — always returned the *degree* stick's circle (first in document order), never the modifier stick's own. Touch-dragging onto the modifier stick's center had been silently falling through to "not center" all along; fixed by scoping the lookup to `modifierJoystick.joystickEl.querySelector('.joy-center')`.
 
+**Envelope** (basic ADSR, linear ramps, always active — not an optional effect, so its "Env" button opens a `<dialog>` with no "Enabled" checkbox, the one exception to every other dialog's shape): `startVoice()` in `src/audio.js` schedules gain `0 → peak (0.15)` over `ENVELOPE_ATTACK` (default 10ms), then `peak → peak*ENVELOPE_SUSTAIN` over `ENVELOPE_DECAY` (default 100ms, landing at 70% of peak by default), then holds there with no further scheduled change until the voice stops. `stopVoice()` always releases from whatever the gain's *actual current value* is at that moment (`gainNode.gain.setValueAtTime(gainNode.gain.value, now)` before ramping to 0) — release firing mid-attack or mid-decay works correctly, not just release-from-sustain, since it captures the live value rather than assuming the envelope already finished. Sustain is a *fraction of peak* (0-100%), not an independent absolute volume, so it can never exceed the attack's own peak level. Changing any of the four sliders only affects voices started *after* the change — already-scheduled ramps on currently-sounding voices are left alone, same as `GLIDE_TIME` changes not retroactively altering an in-flight glide.
+
 The modifier joystick is likewise single-owner. Each still tracks its touch by identifier, and both can be held at once (one finger per stick), so dragging between wedges without lifting works on either. `:hover` CSS is scoped to `@media (hover: hover)` since touch leaves a wedge "stuck" in `:hover` on most mobile browsers after a drag — touch relies solely on the JS-driven `.active` class.
 
 **Stick dot**: a small circle on each joystick that follows the actual pointer/touch position (via `getScreenCTM()`, clamped to the wedge radius), giving the flat SVG pad a continuous analog-stick feel on top of the discrete wedge zones. Both joysticks get exactly one dot, shared between mouse and touch, and it stays visible at all times — resting at dead centre when nothing is driving it, which reads as the stick's neutral position. (The degree stick briefly had a dot per touch identifier plus a separate mouse-only dot; on a touch device the mouse one never received a `mousemove`, so it sat parked at centre looking like a second stuck touch point.)
@@ -92,11 +94,10 @@ From the user's working todo list, still open as of this writing:
 - **Light mode** — currently one (dark) theme only; no light-mode styles exist yet.
 - **Left-hand keyboard support** — current keyboard bindings (`a s d f` / `w e r` / `1`-`7`) are one-handed on the right/number row; a left-hand-friendly binding scheme hasn't been designed.
 - **More effects** — filter, tremolo, delay, and reverb are now built (see Architecture); open-ended: chorus/flanger (modulated delay), distortion (WaveShaperNode), stereo panning (StereoPannerNode), and compression (DynamicsCompressorNode) are all native-node options that haven't been built. A bitcrusher would need an AudioWorkletNode instead — no stock node does sample-rate reduction.
-- **Envelope editor** — see below, already tracked here before the todo list existed.
 - Background/joystick-label polish items from the todo list ("fix background", "joy lables") were addressed this session (labels: uppercase + two-line split, see Architecture) — re-check `todo.md` directly if picking this up, since it's gitignored and may have moved on since this README was last updated.
 
 Longer-standing items:
 
 - Regression harness: a hidden test mode running oscillator start/stop assertions (triad→7th = +1 voice/0 stops, etc.) to catch future voice-lifecycle regressions without manual instrumentation.
-- Envelope is currently just `ATTACK=0.01, RELEASE=0.08` constants (AR, not full ADSR), linear ramps. Discussed but not built: full ADSR + curve shape + a small UI panel for it.
+- Envelope is currently linear-ramp ADSR only (see Architecture) — no curve shape (exponential/logarithmic) option, and no per-stage curve picker in the UI.
 - `icons/icon.svg` circles sit close to the maskable safe-zone edge (~79% of the safe radius) — fine as "any" purpose icons, but don't add a "maskable" purpose entry without pulling them in first or Android's circular mask will clip the outer dots.

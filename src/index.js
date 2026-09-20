@@ -1,4 +1,14 @@
-import { init as initAudio, audio, setGlideEnabled, setGlideTime, setGlideEdgesEnabled } from './audio.js';
+import {
+  init as initAudio,
+  audio,
+  setGlideEnabled,
+  setGlideTime,
+  setGlideEdgesEnabled,
+  setEnvelopeAttack,
+  setEnvelopeDecay,
+  setEnvelopeSustain,
+  setEnvelopeRelease,
+} from './audio.js';
 import {
   init as initEffects,
   effects,
@@ -32,11 +42,6 @@ initEffects();
 // sliders whose onInput is expensive (regenerating a buffer) — those only
 // fire once a drag settles instead of on every 'input' tick.
 function wireFxDialog({ toggleBtn, dialog, enabledCheckbox, isEnabled, setEnabled, sliders }) {
-  function syncToggleBtn() {
-    toggleBtn.classList.toggle('active', isEnabled());
-    toggleBtn.setAttribute('aria-pressed', String(isEnabled()));
-  }
-
   toggleBtn.addEventListener('click', () => dialog.showModal());
 
   // Native <dialog> has no built-in click-outside-to-close; clicking the
@@ -46,11 +51,22 @@ function wireFxDialog({ toggleBtn, dialog, enabledCheckbox, isEnabled, setEnable
     if (e.target === dialog) dialog.close();
   });
 
-  enabledCheckbox.checked = isEnabled();
-  enabledCheckbox.addEventListener('change', () => {
-    setEnabled(enabledCheckbox.checked);
+  // enabledCheckbox is optional — the envelope dialog has no on/off concept
+  // (always active, not an optional effect), so it skips this whole block
+  // and toggleBtn stays a plain "open the dialog" button with no
+  // active/inactive state to sync.
+  if (enabledCheckbox) {
+    const syncToggleBtn = () => {
+      toggleBtn.classList.toggle('active', isEnabled());
+      toggleBtn.setAttribute('aria-pressed', String(isEnabled()));
+    };
+    enabledCheckbox.checked = isEnabled();
+    enabledCheckbox.addEventListener('change', () => {
+      setEnabled(enabledCheckbox.checked);
+      syncToggleBtn();
+    });
     syncToggleBtn();
-  });
+  }
 
   sliders.forEach(({ slider, valueEl, format, onInput, commitOn = 'input' }) => {
     valueEl.textContent = format(Number(slider.value));
@@ -60,8 +76,6 @@ function wireFxDialog({ toggleBtn, dialog, enabledCheckbox, isEnabled, setEnable
       valueEl.textContent = format(value);
     });
   });
-
-  syncToggleBtn();
 }
 
 wireFxDialog({
@@ -211,6 +225,40 @@ holdToggleBtn.addEventListener('click', () => {
     releaseAllHeld();
     setJoyDirection('center');
   }
+});
+
+// Basic ADSR — always active, so no enabledCheckbox (see wireFxDialog).
+// Shapes every voice's gain from the moment it starts, not just an
+// optional effect layered on top, so there's nothing to turn off here.
+wireFxDialog({
+  toggleBtn: document.getElementById('envelope-toggle'),
+  dialog: document.getElementById('envelope-dialog'),
+  sliders: [
+    {
+      slider: document.getElementById('envelope-attack-slider'),
+      valueEl: document.getElementById('envelope-attack-value'),
+      format: (v) => `${Math.round(v * 1000)}ms`,
+      onInput: setEnvelopeAttack,
+    },
+    {
+      slider: document.getElementById('envelope-decay-slider'),
+      valueEl: document.getElementById('envelope-decay-value'),
+      format: (v) => `${Math.round(v * 1000)}ms`,
+      onInput: setEnvelopeDecay,
+    },
+    {
+      slider: document.getElementById('envelope-sustain-slider'),
+      valueEl: document.getElementById('envelope-sustain-value'),
+      format: (v) => `${Math.round(v * 100)}%`,
+      onInput: setEnvelopeSustain,
+    },
+    {
+      slider: document.getElementById('envelope-release-slider'),
+      valueEl: document.getElementById('envelope-release-value'),
+      format: (v) => `${Math.round(v * 1000)}ms`,
+      onInput: setEnvelopeRelease,
+    },
+  ],
 });
 
 // Initialize UI

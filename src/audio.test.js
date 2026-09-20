@@ -8,6 +8,10 @@ import {
   setGlideEnabled,
   setGlideTime,
   setGlideEdgesEnabled,
+  setEnvelopeAttack,
+  setEnvelopeDecay,
+  setEnvelopeSustain,
+  setEnvelopeRelease,
   glideVoice,
   reconcileVoices,
 } from './audio.js';
@@ -20,6 +24,10 @@ describe('audio module', () => {
     audio.glideEnabled = false;
     audio.GLIDE_TIME = 0.12;
     audio.glideEdgesEnabled = false;
+    audio.ENVELOPE_ATTACK = 0.01;
+    audio.ENVELOPE_DECAY = 0.1;
+    audio.ENVELOPE_SUSTAIN = 0.7;
+    audio.ENVELOPE_RELEASE = 0.08;
   });
 
   it('has constants defined', () => {
@@ -79,6 +87,72 @@ describe('audio module', () => {
     startVoice('b', 550);
     setWaveType('triangle');
     expect([...audio.voices.values()].map(v => v.osc.type)).toEqual(['triangle', 'triangle']);
+  });
+
+  describe('envelope (ADSR)', () => {
+    it('defaults to 10ms attack, 100ms decay, 70% sustain, 80ms release', () => {
+      expect(audio.ENVELOPE_ATTACK).toBe(0.01);
+      expect(audio.ENVELOPE_DECAY).toBe(0.1);
+      expect(audio.ENVELOPE_SUSTAIN).toBe(0.7);
+      expect(audio.ENVELOPE_RELEASE).toBe(0.08);
+    });
+
+    it('allows setting all four stages', () => {
+      setEnvelopeAttack(0.05);
+      setEnvelopeDecay(0.2);
+      setEnvelopeSustain(0.4);
+      setEnvelopeRelease(0.3);
+      expect(audio.ENVELOPE_ATTACK).toBe(0.05);
+      expect(audio.ENVELOPE_DECAY).toBe(0.2);
+      expect(audio.ENVELOPE_SUSTAIN).toBe(0.4);
+      expect(audio.ENVELOPE_RELEASE).toBe(0.3);
+    });
+
+    it('schedules a 0 -> peak -> peak*sustain ramp at start, in that order', () => {
+      setEnvelopeAttack(0.02);
+      setEnvelopeDecay(0.1);
+      setEnvelopeSustain(0.5);
+      startVoice('a', 440);
+      const calls = audio.voices.get('a').gainNode.gain.calls;
+      expect(calls).toHaveLength(3);
+      expect(calls[0]).toEqual({ method: 'setValueAtTime', value: 0, time: 0 });
+      expect(calls[1]).toEqual({ method: 'linearRampToValueAtTime', value: 0.15, time: 0.02 });
+      // sustain level is a fraction of the same peak gain used above (0.15),
+      // not an independent volume — 0.15 * 0.5 = 0.075. Attack + decay
+      // (0.02 + 0.1) is a float sum, so compare the time loosely.
+      expect(calls[2].method).toBe('linearRampToValueAtTime');
+      expect(calls[2].value).toBeCloseTo(0.075, 10);
+      expect(calls[2].time).toBeCloseTo(0.12, 10);
+    });
+
+    it('holds at the sustain level indefinitely once decay finishes (no further scheduled changes)', () => {
+      startVoice('a', 440);
+      const gain = audio.voices.get('a').gainNode.gain;
+      const callCountAfterStart = gain.calls.length;
+      // Nothing else touches the gain param until stopVoice is called.
+      expect(gain.calls.length).toBe(callCountAfterStart);
+      expect(gain.value).toBeCloseTo(0.15 * 0.7, 5);
+    });
+
+    it('releases from whatever the current level is, over ENVELOPE_RELEASE', () => {
+      setEnvelopeRelease(0.5);
+      startVoice('a', 440);
+      const gain = audio.voices.get('a').gainNode.gain;
+      // Simulate having been stopped mid-decay, before reaching sustain —
+      // the mock's linearRampToValueAtTime already collapsed .value to the
+      // decay's target, so instead assert the release call's shape directly.
+      stopVoice('a');
+      const lastCall = gain.calls[gain.calls.length - 1];
+      expect(lastCall).toEqual({ method: 'linearRampToValueAtTime', value: 0, time: 0.5 });
+    });
+
+    it('changing envelope settings does not retroactively affect an already-scheduled voice', () => {
+      startVoice('a', 440);
+      const originalCalls = [...audio.voices.get('a').gainNode.gain.calls];
+      setEnvelopeAttack(0.9);
+      setEnvelopeSustain(0.1);
+      expect(audio.voices.get('a').gainNode.gain.calls).toEqual(originalCalls);
+    });
   });
 
   describe('startVoice glide-in', () => {
