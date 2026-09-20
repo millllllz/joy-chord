@@ -66,8 +66,8 @@
     box-sizing: border-box;
   }
   /* Portrait: joysticks stacked one above the other (each as large as half
-     the viewport height allows), with all three controls sharing a single
-     row underneath. Grid rather than flex so the controls land in known
+     the viewport height allows), with the controls sandwiched between them
+     as a single row. Grid rather than flex so everything lands in known
      cells instead of relying on wrap order. */
   .joysticks {
     display: grid;
@@ -90,24 +90,21 @@
     grid-row: 1;
     justify-self: center;
   }
-  .joysticks #joystick {
+  .joysticks .controls {
     grid-column: 1 / -1;
     grid-row: 2;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    max-width: 100%;
+  }
+  .joysticks #joystick {
+    grid-column: 1 / -1;
+    grid-row: 3;
     justify-self: center;
-  }
-  /* The three controls share row 3, left to right. */
-  .joysticks .fx-toggles {
-    grid-column: 1;
-    grid-row: 3;
-  }
-  .joysticks .key-select {
-    grid-column: 2;
-    grid-row: 3;
-    margin: 0;
-  }
-  .joysticks .wave-select {
-    grid-column: 3;
-    grid-row: 3;
   }
 
   /* Landscape: give the joysticks the whole viewport height (they're square,
@@ -129,26 +126,17 @@
     }
     .joysticks #degree-joystick {
       grid-column: 1;
-      grid-row: 1 / span 3;
+      grid-row: 1;
     }
     .joysticks #joystick {
       grid-column: 3;
-      grid-row: 1 / span 3;
+      grid-row: 1;
     }
-    .joysticks .fx-toggles {
+    .joysticks .controls {
       grid-column: 2;
       grid-row: 1;
       flex-direction: column;
-      align-self: end;
-    }
-    .joysticks .key-select {
-      grid-column: 2;
-      grid-row: 2;
-    }
-    .joysticks .wave-select {
-      grid-column: 2;
-      grid-row: 3;
-      align-self: start;
+      gap: 4px;
     }
   }
   /* Shared wedge styles for both joysticks (8-wedge chord + 7-wedge degree).
@@ -275,7 +263,6 @@
   }
 
   .key-select {
-    margin: 4px 0 0;
     padding: 6px 10px;
     border-radius: 6px;
     border: none;
@@ -294,6 +281,8 @@
   .fx-toggles {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 4px;
   }
   .fx-toggle {
@@ -305,6 +294,7 @@
     font-size: 10px;
     font-weight: 700;
     font-family: inherit;
+    text-transform: uppercase;
     cursor: pointer;
     touch-action: manipulation;
     transition: background 0.1s ease, color 0.1s ease;

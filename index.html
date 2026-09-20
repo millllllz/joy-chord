@@ -143,16 +143,18 @@
         <circle class="stick-dot" id="degree-stick-dot" cx="110" cy="110" r="14" />
       </svg>
 
-      <div class="fx-toggles">
-        <button class="fx-toggle" id="delay-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Delay</button>
-        <button class="fx-toggle" id="reverb-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Reverb</button>
-        <button class="fx-toggle" id="filter-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Filter</button>
-        <button class="fx-toggle" id="tremolo-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Tremolo</button>
-        <button class="fx-toggle" id="glide-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Glide</button>
-        <button class="fx-toggle" id="hold-toggle" type="button" aria-pressed="false">Hold</button>
+      <div class="controls">
+        <div class="fx-toggles">
+          <button class="fx-toggle" id="delay-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Delay</button>
+          <button class="fx-toggle" id="reverb-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Reverb</button>
+          <button class="fx-toggle" id="filter-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Filter</button>
+          <button class="fx-toggle" id="tremolo-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Tremolo</button>
+          <button class="fx-toggle" id="glide-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Glide</button>
+          <button class="fx-toggle" id="hold-toggle" type="button" aria-pressed="false">Hold</button>
+        </div>
+        <select class="key-select" id="key-select"></select>
+        <select class="key-select wave-select" id="wave-select"></select>
       </div>
-      <select class="key-select" id="key-select"></select>
-      <select class="key-select wave-select" id="wave-select"></select>
 
       <svg class="joystick" id="joystick" viewBox="0 0 220 220">
         <defs>
