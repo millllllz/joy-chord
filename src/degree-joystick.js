@@ -18,6 +18,10 @@ export const degreeJoystick = {
   // than stacking a second chord on top.
   degreeTouchId: null,
   touchedDegreeKey: null,
+  // Whether the in-progress touch's touchstart landed on the center circle —
+  // with Hold on, only a tap (start AND end on center) releases; a drag that
+  // merely ends up over center doesn't count.
+  touchStartedOnCenter: false,
 };
 
 export function init() {
@@ -53,12 +57,12 @@ export function init() {
     d.qualityEl = qualityEl;
   });
 
-  // Mouse has no discrete "release" event of its own — this is its
-  // equivalent of the touch "lift while at center" reset gesture. Safe to
-  // fire unconditionally: with Hold off, the per-wedge mouseleave below has
-  // already released everything by the time the mouse reaches here, so
-  // this is a harmless no-op in that mode.
-  degreeCenterCircle.addEventListener('mouseenter', () => releaseAllHeld());
+  // A click on the center circle is the release gesture. With Hold off this
+  // is a harmless no-op — the per-wedge mouseleave below has already
+  // released everything by the time a click could land here. With Hold on,
+  // it's the deliberate reset: mere hover no longer releases a latched
+  // chord, since the pointer can pass over center on its way to a wedge.
+  degreeCenterCircle.addEventListener('click', () => releaseAllHeld());
 
   // One dot, shared by mouse and touch, resting visibly at centre when
   // nothing is driving it — the stick's neutral position.
@@ -87,6 +91,9 @@ export function init() {
     const touch = e.changedTouches[0];
     degreeJoystick.degreeTouchId = touch.identifier;
     moveStickDot(degreeJoystick.degreeStickDot, degreeJoystick.degreeJoystickEl, touch.clientX, touch.clientY);
+
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    degreeJoystick.touchStartedOnCenter = !!(el && el.classList && el.classList.contains('joy-center'));
 
     const d = degreeAtPoint(touch.clientX, touch.clientY);
     if (!d) return;
@@ -147,14 +154,14 @@ export function init() {
 
     const key = degreeJoystick.touchedDegreeKey;
     if (!key) return;
-    // With Hold on, lifting only resets if the finger was actually AT the
-    // center circle at that moment — the deliberate "intentional reset"
-    // gesture. Lifting anywhere else (on a wedge, in a gap, or off the
-    // pad) leaves the note latched.
+    // With Hold on, lifting only resets on a tap — touchstart AND touchend
+    // both on the center circle. A drag that merely ends up over center
+    // (without starting there) leaves the note latched; releasing takes a
+    // deliberate tap on the circle instead.
     if (settings.holdEnabled) {
       const el = document.elementFromPoint(touch.clientX, touch.clientY);
       const isDeadCenter = el && el.classList && el.classList.contains('joy-center');
-      if (!isDeadCenter) return;
+      if (!(degreeJoystick.touchStartedOnCenter && isDeadCenter)) return;
     }
     releaseDegree(degreeJoystick.degreeByKey.get(key));
     degreeJoystick.touchedDegreeKey = null;

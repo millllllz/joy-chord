@@ -9,6 +9,10 @@ export const modifierJoystick = {
   currentDirection: 'center',
   heldModifierKeys: new Set(),
   modifierTouchId: null,
+  // Whether the in-progress touch's touchstart landed on the center circle —
+  // with Hold on, only a tap (start AND end on center) releases; a drag that
+  // merely ends up over center doesn't count.
+  touchStartedOnCenter: false,
   joystickEl: null,
   joyStickDot: null,
 };
@@ -116,10 +120,19 @@ export function init() {
     wedge.addEventListener('mouseenter', () => setJoyDirection(wedge.dataset.dir));
   });
 
-  // The center circle is the reset gesture regardless of Hold — mouse has
-  // no discrete "release" event, so entering it is as close as mouse gets
-  // to the touch "lift while at center" gesture.
-  joyCenterCircle.addEventListener('mouseenter', () => setJoyDirection('center'));
+  // With Hold off, merely entering the center circle is the reset gesture
+  // (mouse has no discrete "release" event, so hover stands in for it). With
+  // Hold on, a latched note must not drop just because the pointer passed
+  // over center on its way elsewhere — releasing it takes a deliberate
+  // click on the circle instead.
+  joyCenterCircle.addEventListener('mouseenter', () => {
+    if (settings.holdEnabled) return;
+    setJoyDirection('center');
+  });
+  joyCenterCircle.addEventListener('click', () => {
+    if (!settings.holdEnabled) return;
+    setJoyDirection('center');
+  });
   modifierJoystick.joystickEl.addEventListener('mouseleave', () => {
     if (settings.holdEnabled) return;
     setJoyDirection('center');
@@ -165,9 +178,10 @@ export function init() {
     modifierJoystick.modifierTouchId = touch.identifier;
     moveStickDot(modifierJoystick.joyStickDot, modifierJoystick.joystickEl, touch.clientX, touch.clientY);
     const dir = directionAtPoint(touch.clientX, touch.clientY);
+    modifierJoystick.touchStartedOnCenter = dir === 'center';
     if (!dir) return;
     // Landing on center at touchdown doesn't reset while Hold is on — only
-    // an actual lift there does (endModifierTouch below).
+    // a tap (lift also at center, see endModifierTouch below) does.
     if (dir === 'center' && settings.holdEnabled) return;
     setJoyDirection(dir);
   }, { passive: false });
@@ -199,10 +213,12 @@ export function init() {
     e.preventDefault();
     modifierJoystick.modifierTouchId = null;
     resetStickDot(modifierJoystick.joyStickDot);
-    // With Hold on, only reset if the finger was actually at the center
-    // circle at the moment of lift — the deliberate reset gesture. Lifting
-    // anywhere else (a wedge, the gap, or off the pad) leaves it latched.
-    if (settings.holdEnabled && directionAtPoint(touch.clientX, touch.clientY) !== 'center') return;
+    // With Hold on, only reset on a tap — touchstart AND touchend both on
+    // the center circle. A drag that merely ends up over center (without
+    // starting there) leaves the note latched; releasing takes a
+    // deliberate tap on the circle instead.
+    if (settings.holdEnabled &&
+        !(modifierJoystick.touchStartedOnCenter && directionAtPoint(touch.clientX, touch.clientY) === 'center')) return;
     setJoyDirection('center');
   };
   modifierJoystick.joystickEl.addEventListener('touchend', endModifierTouch, { passive: false });
