@@ -55,6 +55,12 @@ export function init() {
     qualityEl.textContent = d.quality === 'diminished' ? 'dim' : d.quality;
     degreeJoystick.degreeJoystickEl.insertBefore(qualityEl, degreeCenterCircle);
     d.qualityEl = qualityEl;
+
+    const [bx, by] = d.bindKeyPos;
+    const bindKeyEl = svgEl('text', { class: 'bindkey-label', 'data-key': d.key, x: bx, y: by });
+    bindKeyEl.textContent = d.bindKey.toUpperCase();
+    degreeJoystick.degreeJoystickEl.insertBefore(bindKeyEl, degreeCenterCircle);
+    d.bindKeyEl = bindKeyEl;
   });
 
   // A click on the center circle is the release gesture. With Hold off this

@@ -262,6 +262,24 @@
     opacity: 0.85;
   }
 
+  /* QWERTY bind-key hints on each wedge — only shown once the user has
+     actually pressed a bound key, so touch/mouse-only sessions never see
+     labels for a control scheme they can't use. */
+  .bindkey-label {
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    fill: var(--muted);
+    opacity: 0;
+    pointer-events: none;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: opacity 0.15s ease;
+  }
+  body.keyboard-active .bindkey-label {
+    opacity: 0.55;
+  }
+
   .key-select {
     padding: 6px 10px;
     border-radius: 6px;

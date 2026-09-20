@@ -20,6 +20,7 @@ import { init as initSettings, settings, setHoldEnabled } from './settings.js';
 import { init as initDegreeJoystick, releaseAllHeld } from './degree-joystick.js';
 import { init as initModifierJoystick, setJoyDirection } from './modifier-joystick.js';
 import { init as initDebug, debugLog } from './debug.js';
+import { chords } from './chords.js';
 import { init as initFullscreen } from './fullscreen.js';
 
 // Initialize audio system
@@ -217,6 +218,20 @@ initDebug();
 initSettings();
 initDegreeJoystick();
 initModifierJoystick();
+
+// Bind-key hint labels on the wedges start hidden — only a device actually
+// driven by a keyboard should see them. The first keydown matching one of
+// the bound play/modifier keys reveals them; a touchstart hides them again,
+// since a hybrid device (e.g. a touchscreen laptop) can switch modality
+// mid-session.
+const BIND_KEYS = new Set([
+  ...chords.DEGREES.map(d => d.bindKey),
+  'j', 'i', 'k', 'o', 'l', 'p', ';', '[',
+]);
+window.addEventListener('keydown', (e) => {
+  if (BIND_KEYS.has(e.key.toLowerCase())) document.body.classList.add('keyboard-active');
+});
+window.addEventListener('touchstart', () => document.body.classList.remove('keyboard-active'), { passive: true });
 initFullscreen();
 
 // Register PWA service worker
