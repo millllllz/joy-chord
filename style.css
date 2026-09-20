@@ -101,12 +101,14 @@
      wrap without needing 'order' (avoids an ID-vs-class specificity fight
      with the landscape rules below, which target the same elements). */
   .joysticks .key-select {
-    flex-basis: 100%;
+    flex-basis: auto;
     max-width: fit-content;
-    margin-left: auto;
-    margin-right: auto;
+    margin: 44px 4px 0;
     order: 3;
-    margin-bottom: 44px;
+  }
+
+  .joysticks .wave-select {
+    order: 3;
   }
 
   /* Landscape: give the joysticks the whole viewport height (they're square,
