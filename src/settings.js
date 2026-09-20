@@ -17,11 +17,16 @@ export function init() {
   // every existing currentKeyRoot number means. Only the *display* order
   // is rotated to start at A (the conventional listing order), independent
   // of which value ends up selected by default (still C, i.e. root 0).
+  // A/A#/B (indices 9-11) sit right before C in that rotated list, so their
+  // raw semitone-from-C4 values (9-11) would put them an octave *above*
+  // C-G#, breaking the visually-implied ascending run — drop them an
+  // octave so pitch rises smoothly across the whole dropdown.
   const startAt = settings.KEY_NAMES.indexOf('A');
   const displayOrder = [...settings.KEY_NAMES.slice(startAt), ...settings.KEY_NAMES.slice(0, startAt)];
   displayOrder.forEach(name => {
     const option = document.createElement('option');
-    option.value = settings.KEY_NAMES.indexOf(name);
+    const semitone = settings.KEY_NAMES.indexOf(name);
+    option.value = semitone >= startAt ? semitone - 12 : semitone;
     option.textContent = name;
     keySelectEl.appendChild(option);
   });
