@@ -26,10 +26,16 @@ export function init() {
 
   degreeJoystick.degreeJoystickEl = document.getElementById('degree-joystick');
 
+  // The center circle, its label, and the stick-dot are pre-authored in
+  // markup, drawn last so they layer above the wedges — the wedges/labels
+  // below must be inserted before them, not appended, or they'd paint on
+  // top and shadow the stick-dot's travel across the pad.
+  const degreeCenterCircle = document.getElementById('degree-center');
+
   // Render wedges and labels
   chords.DEGREES.forEach(d => {
     const wedgeEl = svgEl('path', { class: 'wedge degree-wedge', 'data-key': d.key, d: d.wedge });
-    degreeJoystick.degreeJoystickEl.appendChild(wedgeEl);
+    degreeJoystick.degreeJoystickEl.insertBefore(wedgeEl, degreeCenterCircle);
     d.wedgeEl = wedgeEl;
   });
 
@@ -37,17 +43,16 @@ export function init() {
     const [lx, ly] = d.labelPos;
     const labelEl = svgEl('text', { class: 'degree-label', 'data-key': d.key, x: lx, y: ly });
     labelEl.textContent = d.degree;
-    degreeJoystick.degreeJoystickEl.appendChild(labelEl);
+    degreeJoystick.degreeJoystickEl.insertBefore(labelEl, degreeCenterCircle);
     d.labelEl = labelEl;
 
     const [qx, qy] = d.qualityPos;
     const qualityEl = svgEl('text', { class: 'degree-quality', 'data-key': d.key, x: qx, y: qy });
     qualityEl.textContent = d.quality === 'diminished' ? 'dim' : d.quality;
-    degreeJoystick.degreeJoystickEl.appendChild(qualityEl);
+    degreeJoystick.degreeJoystickEl.insertBefore(qualityEl, degreeCenterCircle);
     d.qualityEl = qualityEl;
   });
 
-  const degreeCenterCircle = document.getElementById('degree-center');
   // Mouse has no discrete "release" event of its own — this is its
   // equivalent of the touch "lift while at center" reset gesture. Safe to
   // fire unconditionally: with Hold off, the per-wedge mouseleave below has
