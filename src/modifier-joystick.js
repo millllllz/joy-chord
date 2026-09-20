@@ -93,7 +93,7 @@ export function init() {
   MODIFIER_DIRECTIONS.forEach((dir, i) => {
     const start = -MODIFIER_ANGLE_STEP / 2 + i * MODIFIER_ANGLE_STEP;
     const end = start + MODIFIER_ANGLE_STEP;
-    const wedgeEl = svgEl('path', { class: 'joy-wedge', 'data-dir': dir, d: wedgePath(start, end) });
+    const wedgeEl = svgEl('path', { class: 'wedge joy-wedge', 'data-dir': dir, d: wedgePath(start, end) });
     modifierJoystick.joystickEl.insertBefore(wedgeEl, labelsAnchor);
   });
   const joyWedges = modifierJoystick.joystickEl.querySelectorAll('.joy-wedge');

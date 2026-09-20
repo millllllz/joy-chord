@@ -30,7 +30,7 @@ export function init() {
 
   // Render wedges and labels
   chords.DEGREES.forEach(d => {
-    const wedgeEl = svgEl('path', { class: 'degree-wedge', 'data-key': d.key, d: d.wedge });
+    const wedgeEl = svgEl('path', { class: 'wedge degree-wedge', 'data-key': d.key, d: d.wedge });
     degreeJoystick.degreeJoystickEl.appendChild(wedgeEl);
     d.wedgeEl = wedgeEl;
   });

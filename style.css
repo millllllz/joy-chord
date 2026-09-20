@@ -1,7 +1,6 @@
   :root {
     color-scheme: light dark;
     --bg: #14161a;
-    --bg-gradient-stop: #23262c;
     --panel: #1e2126;
     --panel-hover: #2c3038;
     --wedge-fill: #22252a;
@@ -11,8 +10,6 @@
     --accent-active: #3fd8ac;
     --text: #e8eaed;
     --muted: #8a8f98;
-    --gradient-light: #3a3f47;
-    --gradient-dark: #22252a;
     --label-active: #0d1f19;
     --center-circle-fill: rgba(110,231,201,0.15);
     --center-circle-stroke: rgba(255,255,255,0.1);
@@ -25,7 +22,6 @@
   @media (prefers-color-scheme: light) {
     :root {
       --bg: #f5f5f5;
-      --bg-gradient-stop: #ffffff;
       --panel: #efefef;
       --panel-hover: #e0e0e0;
       --wedge-fill: #e8e8e8;
@@ -35,8 +31,6 @@
       --accent-active: #10b981;
       --text: #1a1a1a;
       --muted: #666666;
-      --gradient-light: #f0f0f0;
-      --gradient-dark: #e0e0e0;
       --label-active: #ffffff;
       --center-circle-fill: rgba(5,150,105,0.1);
       --center-circle-stroke: rgba(0,0,0,0.1);
@@ -157,9 +151,10 @@
       align-self: start;
     }
   }
-  /* Shared wedge styles for both joysticks (8-wedge chord + 7-wedge degree). */
-  .joy-wedge,
-  .degree-wedge {
+  /* Shared wedge styles for both joysticks (8-wedge chord + 7-wedge degree).
+     Every wedge path carries .wedge; the .joy-wedge/.degree-wedge classes
+     alongside it exist only for JS hit-testing. */
+  .wedge {
     cursor: pointer;
     fill: var(--wedge-fill);
     stroke: var(--wedge-stroke);
@@ -167,8 +162,7 @@
     stroke-linejoin: round;
     transition: fill 0.1s ease;
   }
-  .joy-wedge.active,
-  .degree-wedge.active {
+  .wedge.active {
     fill: var(--accent);
   }
   /* :hover only for devices that actually have a hover-capable pointer —
@@ -177,8 +171,7 @@
      a new wedge left the old one still highlighted alongside the new
      one's JS-driven .active fill. */
   @media (hover: hover) {
-    .joy-wedge:hover,
-    .degree-wedge:hover {
+    .wedge:hover {
       fill: var(--accent);
     }
   }
@@ -251,8 +244,8 @@
   }
 
   /* degree joystick: 7 wedges instead of 8, plain-text degree labels
-     (I, ii, iii...) rather than uppercase modifier names. Wedge fill/hover/
-     active styles are shared with .joy-wedge above. */
+     (I, ii, iii...) rather than uppercase modifier names. Wedge styles are
+     shared via .wedge above. */
   .degree-label {
     font-size: 15px;
     font-weight: 700;
