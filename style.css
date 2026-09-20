@@ -100,6 +100,18 @@
     justify-content: center;
     gap: 8px;
     max-width: 100%;
+    /* .controls is a <fieldset> — the single bordered "set of all
+       controls" panel, replacing the browser default border/margin/
+       padding. FX and Sound are plain <div>s inside it now, not their
+       own bordered fieldsets, so there's one box, not two side by side.
+       --wedge-stroke is defined as var(--bg) itself (for seamless wedge
+       edges against the page background), so it's invisible for an
+       actual visible outline like this one — --panel-hover reads as a
+       subtle but real line instead. */
+    margin: 0;
+    padding: 6px 10px;
+    border: 1px solid var(--panel-hover);
+    border-radius: 8px;
   }
   .joysticks #joystick {
     grid-column: 1 / -1;
@@ -137,13 +149,13 @@
       grid-row: 1;
       flex-direction: column;
       /* Portrait's wrap exists so an overlong row breaks onto more rows;
-         in landscape that would instead put the FX and Sound fieldsets
+         in landscape that would instead put the FX and Sound sub-groups
          side by side in a second column once they overflow the row's
          height, which reads as "not stacked" — force a single column. */
       flex-wrap: nowrap;
       gap: 4px;
     }
-    /* The two fieldsets follow suit: buttons/selects stack vertically to
+    /* The two sub-groups follow suit: buttons/selects stack vertically to
        match the vertical .controls column, instead of staying in rows.
        nowrap for the same reason as .controls above — otherwise an
        overflowing column of buttons breaks sideways into a second column. */
@@ -320,15 +332,11 @@
     background: var(--panel-hover);
   }
 
-  /* Both control-group fieldsets share a border (replacing the browser
-     default with one that matches the wedge outlines) and a small
-     uppercase legend; only their item axis differs. */
+  /* FX and Sound are plain sub-groups inside the single .controls
+     fieldset now (see above) — no border of their own, just their own
+     flex flow; only their item axis differs. */
   .fx-toggles,
   .sound-controls {
-    border: 1px solid var(--wedge-stroke);
-    border-radius: 8px;
-    margin: 0;
-    padding: 6px 8px;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -347,12 +355,11 @@
       flex-wrap: nowrap;
     }
   }
-  /* flex-basis: 100% reliably forces the legend onto its own line when the
-     fieldset is a row (basis = width) — but in the landscape column layout
-     (basis = height) it would stretch the legend to fill the container
+  /* flex-basis: 100% reliably forces the label onto its own line when the
+     group is a row (basis = width) — but in the landscape column layout
+     (basis = height) it would stretch the label to fill the container
      instead, so that axis pins it to auto width/margin-centering there. */
-  .fx-toggles legend,
-  .sound-controls legend {
+  .controls-group-label {
     flex-basis: 100%;
     padding: 0 0 2px;
     font-size: 9px;
@@ -363,8 +370,7 @@
     text-align: center;
   }
   @media (orientation: landscape) {
-    .fx-toggles legend,
-    .sound-controls legend {
+    .controls-group-label {
       flex-basis: auto;
       width: 100%;
     }
