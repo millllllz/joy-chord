@@ -59,7 +59,7 @@ export function init() {
     const [bx, by] = d.bindKeyPos;
     const bindKeyGroup = svgEl('g', { class: 'bindkey', 'data-key': d.key });
     const bindKeyRect = svgEl('rect', {
-      class: 'bindkey-key', x: bx - 8, y: by - 8, width: 16, height: 16, rx: 4,
+      class: 'bindkey-key', x: bx - 5.5, y: by - 5.5, width: 11, height: 11, rx: 3,
     });
     const bindKeyEl = svgEl('text', { class: 'bindkey-label', x: bx, y: by });
     bindKeyEl.textContent = d.bindKey.toLowerCase();
