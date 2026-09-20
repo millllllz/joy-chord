@@ -14,7 +14,7 @@ export const audio = {
   // extends gliding to voices with no pairing partner (a chord tone purely
   // added or removed, not replaced) by having them glide to/from the
   // nearest surviving chord tone instead of attacking/releasing in place.
-  glideEdgesEnabled: false,
+  glideEdgesEnabled: true,
 };
 
 export function init() {
