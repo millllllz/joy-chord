@@ -161,7 +161,15 @@ export function init() {
     if (!touch) return;
     moveStickDot(modifierJoystick.joyStickDot, modifierJoystick.joystickEl, touch.clientX, touch.clientY);
     const dir = directionAtPoint(touch.clientX, touch.clientY);
-    setJoyDirection(dir || 'center');
+    // Only act on a definite wedge or the actual center circle — falling
+    // back to 'center' here (as this used to) meant a finger dragged
+    // through the gap *between* two wedges (widened since the wedge-gap
+    // change) briefly landed on neither, bouncing the chord back to the
+    // bare triad mid-drag before it reached the target wedge. Harmless
+    // without glide (an extra near-instant stop/start), but with glide on
+    // it corrupted a single clean slide into two — reconcile back toward
+    // center, then immediately back out — which reads as glide not working.
+    if (dir) setJoyDirection(dir);
   }, { passive: false });
 
   const endModifierTouch = (e) => {

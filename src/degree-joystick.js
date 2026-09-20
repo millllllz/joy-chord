@@ -91,21 +91,37 @@ export function init() {
     moveStickDot(degreeJoystick.degreeStickDot, degreeJoystick.degreeJoystickEl, touch.clientX, touch.clientY);
 
     const currentKey = degreeJoystick.touchedDegreeKey;
-    const d = degreeAtPoint(touch.clientX, touch.clientY);
-    const newKey = d ? d.key : null;
-    if (newKey === currentKey) return;
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const key = el && el.dataset && el.dataset.key;
+    const d = key ? degreeJoystick.degreeByKey.get(key) : null;
+    if ((d ? d.key : null) === currentKey) return;
+
     // Sliding straight onto a new wedge goes through pressDegree alone —
     // its own monophonic steal logic releases currentKey, and (with glide
     // on) captures its voices for reconcileVoices before that release
     // clears them. Releasing here first, as a separate step, would empty
     // heldDegrees before pressDegree ever saw it, making glide unreachable
-    // by touch-dragging. Only a drag off every wedge (d is null) hard-stops.
+    // by touch-dragging.
     if (d) {
       pressDegree(d);
-    } else if (currentKey) {
-      releaseDegree(degreeJoystick.degreeByKey.get(currentKey));
+      degreeJoystick.touchedDegreeKey = d.key;
+      return;
     }
-    degreeJoystick.touchedDegreeKey = newKey;
+
+    // No wedge under the finger: a hit on the dead-center circle, or truly
+    // off the stick, means "stop" as before — but the narrow gap between
+    // two adjacent wedges (widened since the wedge-gap change) hits
+    // neither a wedge nor the center circle, and must be ignored rather
+    // than treated the same as "stop": releasing there hard-cuts the note
+    // before a drag straight across a gap ever reaches its target wedge,
+    // defeating glide for the exact gesture ("slide across wedges") it
+    // matters most for.
+    const isDeadCenter = el && el.classList && el.classList.contains('joy-center');
+    const isOffPad = !el || !el.closest || !el.closest('#degree-joystick');
+    if (currentKey && (isDeadCenter || isOffPad)) {
+      releaseDegree(degreeJoystick.degreeByKey.get(currentKey));
+      degreeJoystick.touchedDegreeKey = null;
+    }
   }, { passive: false });
 
   const endDegreeTouch = (e) => {
