@@ -12,6 +12,9 @@ import {
   setReverbSendLevel,
   setFilterCutoff,
   setFilterResonance,
+  setTremoloEnabled,
+  setTremoloRate,
+  setTremoloDepth,
 } from './effects.js';
 import { audio, startVoice } from './audio.js';
 
@@ -20,12 +23,16 @@ describe('effects module', () => {
     effects.delayEnabled = true;
     effects.reverbEnabled = true;
     effects.filterEnabled = true;
+    effects.tremoloEnabled = false;
     effects.delayNode = null;
     effects.delayFeedbackGain = null;
     effects.convolver = null;
     effects.delaySend = null;
     effects.reverbSend = null;
     effects.filterNode = null;
+    effects.tremoloGain = null;
+    effects.tremoloLFO = null;
+    effects.tremoloDepthGain = null;
     audio.ctx = null;
     audio.voices = new Map();
   });
@@ -38,6 +45,8 @@ describe('effects module', () => {
     expect(effects.REVERB_SEND_LEVEL).toBe(0.18);
     expect(effects.FILTER_CUTOFF).toBe(2500);
     expect(effects.FILTER_RESONANCE).toBe(1);
+    expect(effects.TREMOLO_RATE).toBe(5);
+    expect(effects.TREMOLO_DEPTH).toBe(0.5);
     expect(effects.FX_RAMP).toBe(0.05);
   });
 
@@ -62,6 +71,12 @@ describe('effects module', () => {
     expect(effects.filterEnabled).toBe(true);
   });
 
+  it('tracks tremolo enabled state, defaulting off', () => {
+    expect(effects.tremoloEnabled).toBe(false);
+    effects.tremoloEnabled = true;
+    expect(effects.tremoloEnabled).toBe(true);
+  });
+
   it('parameter setters update state even before init() has run', () => {
     setDelayTime(0.5);
     expect(effects.DELAY_TIME).toBe(0.5);
@@ -77,6 +92,10 @@ describe('effects module', () => {
     expect(effects.FILTER_CUTOFF).toBe(4000);
     setFilterResonance(6);
     expect(effects.FILTER_RESONANCE).toBe(6);
+    setTremoloRate(7);
+    expect(effects.TREMOLO_RATE).toBe(7);
+    setTremoloDepth(0.8);
+    expect(effects.TREMOLO_DEPTH).toBe(0.8);
   });
 
   it('pushes delay parameter changes live onto the audio nodes once initialized', () => {
@@ -133,14 +152,59 @@ describe('effects module', () => {
     expect(effects.filterNode.Q.value).toBe(4);
   });
 
-  it('routes each voice through the shared filter rather than straight to destination', () => {
+  it('pushes tremolo rate live onto the LFO once initialized', () => {
+    init();
+    setTremoloRate(9);
+    expect(effects.tremoloLFO.frequency.value).toBe(9);
+  });
+
+  it('does not push tremolo depth live while disabled, but does once enabled', () => {
+    init();
+    setTremoloDepth(0.9);
+    expect(effects.TREMOLO_DEPTH).toBe(0.9);
+    // Stays at its init()-time value (disabled means depth 0) rather than
+    // jumping to the new target while the effect is off.
+    expect(effects.tremoloDepthGain.gain.value).toBe(0);
+    setTremoloEnabled(true);
+    setTremoloDepth(0.6);
+    expect(effects.tremoloDepthGain.gain.value).toBe(0.3);
+    expect(effects.tremoloGain.gain.value).toBe(0.7);
+  });
+
+  it('ramps tremolo depth to 0 (not a bypass) when disabled, since it sits in the dry path', () => {
+    init();
+    setTremoloEnabled(true);
+    expect(effects.tremoloDepthGain.gain.value).toBeGreaterThan(0);
+    setTremoloEnabled(false);
+    expect(effects.tremoloDepthGain.gain.value).toBe(0);
+    expect(effects.tremoloGain.gain.value).toBe(1);
+  });
+
+  it('restores the configured depth when re-enabled', () => {
+    init();
+    setTremoloDepth(0.4);
+    setTremoloEnabled(true);
+    setTremoloEnabled(false);
+    setTremoloEnabled(true);
+    expect(effects.tremoloDepthGain.gain.value).toBe(0.2);
+    expect(effects.tremoloGain.gain.value).toBe(0.8);
+  });
+
+  it('routes each voice through filter then tremolo rather than straight to destination', () => {
     init();
     startVoice('test-voice', 440);
     const voice = audio.voices.get('test-voice');
     expect(voice.gainNode.connections).toEqual([effects.filterNode]);
-    expect(effects.filterNode.connections).toContain(audio.ctx.destination);
-    expect(effects.filterNode.connections).toContain(effects.delaySend);
-    expect(effects.filterNode.connections).toContain(effects.reverbSend);
+    expect(effects.filterNode.connections).toEqual([effects.tremoloGain]);
+    expect(effects.tremoloGain.connections).toContain(audio.ctx.destination);
+    expect(effects.tremoloGain.connections).toContain(effects.delaySend);
+    expect(effects.tremoloGain.connections).toContain(effects.reverbSend);
+  });
+
+  it('drives the tremolo gain stage from an LFO scaled by depth/2', () => {
+    init();
+    expect(effects.tremoloLFO.connections).toContain(effects.tremoloDepthGain);
+    expect(effects.tremoloDepthGain.connections).toContain(effects.tremoloGain.gain);
   });
 
   it('routes the delay output into the reverb so repeats are not dry', () => {

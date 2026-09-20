@@ -5,6 +5,7 @@ import {
   setDelayEnabled,
   setReverbEnabled,
   setFilterEnabled,
+  setTremoloEnabled,
   setDelayTime,
   setDelayFeedback,
   setDelaySendLevel,
@@ -12,6 +13,8 @@ import {
   setReverbSendLevel,
   setFilterCutoff,
   setFilterResonance,
+  setTremoloRate,
+  setTremoloDepth,
 } from './effects.js';
 import { init as initSettings } from './settings.js';
 import { init as initDegreeJoystick } from './degree-joystick.js';
@@ -114,6 +117,28 @@ wireFxDialog({
       valueEl: document.getElementById('filter-resonance-value'),
       format: (v) => v.toFixed(1),
       onInput: setFilterResonance,
+    },
+  ],
+});
+
+wireFxDialog({
+  toggleBtn: document.getElementById('tremolo-toggle'),
+  dialog: document.getElementById('tremolo-dialog'),
+  enabledCheckbox: document.getElementById('tremolo-enabled-checkbox'),
+  isEnabled: () => effects.tremoloEnabled,
+  setEnabled: setTremoloEnabled,
+  sliders: [
+    {
+      slider: document.getElementById('tremolo-rate-slider'),
+      valueEl: document.getElementById('tremolo-rate-value'),
+      format: (v) => `${v.toFixed(1)}Hz`,
+      onInput: setTremoloRate,
+    },
+    {
+      slider: document.getElementById('tremolo-depth-slider'),
+      valueEl: document.getElementById('tremolo-depth-value'),
+      format: (v) => `${Math.round(v * 100)}%`,
+      onInput: setTremoloDepth,
     },
   ],
 });

@@ -7,6 +7,10 @@ export const effects = {
   reverbEnabled: true,
   filterNode: null,
   filterEnabled: true,
+  tremoloGain: null,
+  tremoloLFO: null,
+  tremoloDepthGain: null,
+  tremoloEnabled: false,
   delayNode: null,
   delayFeedbackGain: null,
   convolver: null,
@@ -17,14 +21,16 @@ export const effects = {
   REVERB_SEND_LEVEL: 0.18,
   FILTER_CUTOFF: 2500,
   FILTER_RESONANCE: 1,
+  TREMOLO_RATE: 5,
+  TREMOLO_DEPTH: 0.5,
   FX_RAMP: 0.05,
 };
 
 // Unlike delay/reverb (parallel sends with an untouched dry path underneath),
-// the filter is an insert — every voice routes through it (see audio.js), so
-// there's no separate dry path to fall back to when it's "off". Instead its
-// frequency/Q ramp to these fully-open values, passing audio through
-// effectively unfiltered while the node stays in the graph.
+// the filter and tremolo are inserts — every voice routes through both (see
+// audio.js), so neither has a separate dry path to fall back to when it's
+// "off". Instead their parameters ramp to these values, passing audio
+// through each node effectively unaffected while it stays in the graph.
 const FILTER_BYPASS_FREQ = 20000;
 const FILTER_BYPASS_Q = 0.0001;
 
@@ -35,6 +41,24 @@ export function init() {
   effects.filterNode.type = 'lowpass';
   effects.filterNode.frequency.value = effects.filterEnabled ? effects.FILTER_CUTOFF : FILTER_BYPASS_FREQ;
   effects.filterNode.Q.value = effects.filterEnabled ? effects.FILTER_RESONANCE : FILTER_BYPASS_Q;
+
+  // Classic tremolo circuit: an LFO scaled to depth/2 feeds the gain-stage's
+  // `gain` AudioParam, which sits at a baseline of (1 - depth/2) — so the
+  // two sum to swing between (1 - depth) and 1 rather than modulating around
+  // silence. lfo.connect(depthGain) is audio-rate, not a discrete step.
+  effects.tremoloGain = audio.ctx.createGain();
+  const tremoloDepth = effects.tremoloEnabled ? effects.TREMOLO_DEPTH : 0;
+  effects.tremoloGain.gain.value = 1 - tremoloDepth / 2;
+
+  effects.tremoloDepthGain = audio.ctx.createGain();
+  effects.tremoloDepthGain.gain.value = tremoloDepth / 2;
+
+  effects.tremoloLFO = audio.ctx.createOscillator();
+  effects.tremoloLFO.type = 'sine';
+  effects.tremoloLFO.frequency.value = effects.TREMOLO_RATE;
+  effects.tremoloLFO.connect(effects.tremoloDepthGain);
+  effects.tremoloDepthGain.connect(effects.tremoloGain.gain);
+  effects.tremoloLFO.start();
 
   effects.delaySend = audio.ctx.createGain();
   effects.delaySend.gain.value = effects.delayEnabled ? effects.DELAY_SEND_LEVEL : 0;
@@ -67,12 +91,14 @@ export function init() {
   // nothing downstream of the reverb feeds back into the delay.
   effects.delayNode.connect(effects.reverbSend);
 
-  // Every voice connects only to the filter (see audio.js); it fans out to
-  // the dry destination and both effect sends, so filtering lands before the
-  // delay/reverb taps and the echoes/tail come out filtered too.
-  effects.filterNode.connect(audio.ctx.destination);
-  effects.filterNode.connect(effects.delaySend);
-  effects.filterNode.connect(effects.reverbSend);
+  // Every voice connects only to the filter (see audio.js); it feeds the
+  // tremolo stage, which fans out to the dry destination and both effect
+  // sends — so filter then tremolo both land before the delay/reverb taps,
+  // and the echoes/tail pulse and get filtered too.
+  effects.filterNode.connect(effects.tremoloGain);
+  effects.tremoloGain.connect(audio.ctx.destination);
+  effects.tremoloGain.connect(effects.delaySend);
+  effects.tremoloGain.connect(effects.reverbSend);
 }
 
 export function setFilterEnabled(enabled) {
@@ -98,6 +124,35 @@ export function setFilterCutoff(hz) {
 export function setFilterResonance(q) {
   effects.FILTER_RESONANCE = q;
   if (effects.filterNode && effects.filterEnabled) effects.filterNode.Q.value = q;
+}
+
+export function setTremoloEnabled(enabled) {
+  effects.tremoloEnabled = enabled;
+  if (audio.ctx) {
+    const now = audio.ctx.currentTime;
+    const targetDepth = enabled ? effects.TREMOLO_DEPTH : 0;
+    effects.tremoloDepthGain.gain.cancelScheduledValues(now);
+    effects.tremoloDepthGain.gain.setValueAtTime(effects.tremoloDepthGain.gain.value, now);
+    effects.tremoloDepthGain.gain.linearRampToValueAtTime(targetDepth / 2, now + effects.FX_RAMP);
+    effects.tremoloGain.gain.cancelScheduledValues(now);
+    effects.tremoloGain.gain.setValueAtTime(effects.tremoloGain.gain.value, now);
+    effects.tremoloGain.gain.linearRampToValueAtTime(1 - targetDepth / 2, now + effects.FX_RAMP);
+  }
+}
+
+export function setTremoloRate(hz) {
+  effects.TREMOLO_RATE = hz;
+  if (effects.tremoloLFO) effects.tremoloLFO.frequency.value = hz;
+}
+
+export function setTremoloDepth(depth) {
+  effects.TREMOLO_DEPTH = depth;
+  // Only push it live if the effect is currently on — otherwise this just
+  // updates the target the next "enabled" ramp will go to.
+  if (effects.tremoloDepthGain && effects.tremoloGain && effects.tremoloEnabled) {
+    effects.tremoloDepthGain.gain.value = depth / 2;
+    effects.tremoloGain.gain.value = 1 - depth / 2;
+  }
 }
 
 export function setDelayEnabled(enabled) {
