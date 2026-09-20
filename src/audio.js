@@ -79,4 +79,7 @@ export function stopVoice(id) {
 
 export function setWaveType(type) {
   audio.currentWaveType = type;
+  // Retune sustaining voices too, so the change is audible while a chord
+  // is still held rather than only on the next note.
+  audio.voices.forEach(({ osc }) => { osc.type = type; });
 }

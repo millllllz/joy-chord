@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { audio, noteFreq, setWaveType } from './audio.js';
+import { audio, noteFreq, setWaveType, startVoice } from './audio.js';
 
 describe('audio module', () => {
   beforeEach(() => {
@@ -34,5 +34,18 @@ describe('audio module', () => {
 
   it('voice map starts empty', () => {
     expect(audio.voices.size).toBe(0);
+  });
+
+  it('applies the selected waveform to new voices', () => {
+    setWaveType('sawtooth');
+    startVoice('a', 440);
+    expect(audio.voices.get('a').osc.type).toBe('sawtooth');
+  });
+
+  it('retunes sustaining voices when the waveform changes', () => {
+    startVoice('a', 440);
+    startVoice('b', 550);
+    setWaveType('triangle');
+    expect([...audio.voices.values()].map(v => v.osc.type)).toEqual(['triangle', 'triangle']);
   });
 });

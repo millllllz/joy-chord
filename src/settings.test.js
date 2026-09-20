@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { settings, setKeyRoot, setWaveType } from './settings.js';
+import { settings, setKeyRoot } from './settings.js';
 
 describe('settings module', () => {
   beforeEach(() => {
     settings.currentKeyRoot = 0;
-    settings.currentWaveType = 'sine';
   });
 
   it('tracks current key root', () => {
@@ -17,12 +16,6 @@ describe('settings module', () => {
     setKeyRoot(3);
     setKeyRoot(3);
     expect(settings.currentKeyRoot).toBe(3);
-  });
-
-  it('tracks current waveform type', () => {
-    expect(settings.currentWaveType).toBe('sine');
-    setWaveType('square');
-    expect(settings.currentWaveType).toBe('square');
   });
 
   it('exports KEY_NAMES with 12 pitches', () => {

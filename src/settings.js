@@ -1,8 +1,8 @@
 import { chords } from './chords.js';
+import { audio, setWaveType } from './audio.js';
 
 export const settings = {
   currentKeyRoot: 0,
-  currentWaveType: 'sine',
   KEY_NAMES: chords.KEY_NAMES,
   WAVE_TYPES: chords.WAVE_TYPES,
 };
@@ -27,7 +27,7 @@ export function init() {
     option.textContent = type[0].toUpperCase() + type.slice(1);
     waveSelectEl.appendChild(option);
   });
-  waveSelectEl.value = settings.currentWaveType;
+  waveSelectEl.value = audio.currentWaveType;
   waveSelectEl.addEventListener('change', () => {
     setWaveType(waveSelectEl.value);
   });
@@ -37,8 +37,4 @@ export function setKeyRoot(root) {
   if (root === settings.currentKeyRoot) return;
   settings.currentKeyRoot = root;
   // Re-voicing handled by caller
-}
-
-export function setWaveType(type) {
-  settings.currentWaveType = type;
 }

@@ -16,11 +16,6 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="fx-toggles">
-    <button class="fx-toggle" id="delay-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Delay</button>
-    <button class="fx-toggle" id="reverb-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Reverb</button>
-  </div>
-
   <dialog class="fx-dialog" id="delay-dialog">
     <form method="dialog" class="fx-dialog-form">
       <h2>Delay</h2>
@@ -72,7 +67,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v25</div>
+  <div class="build-version">v26</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -87,6 +82,10 @@
         </defs>
       </svg>
 
+      <div class="fx-toggles">
+        <button class="fx-toggle" id="delay-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Delay</button>
+        <button class="fx-toggle" id="reverb-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Reverb</button>
+      </div>
       <select class="key-select" id="key-select"></select>
       <select class="key-select wave-select" id="wave-select"></select>
 

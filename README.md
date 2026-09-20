@@ -4,7 +4,7 @@ JoyChord is an installable PWA HiChord-inspired chord synthesizer. Web Audio API
 
 **Live:** https://millllllz.github.io/joy-chord/
 **Repo:** https://github.com/millllllz/joy-chord (public, `master` branch, deploys via GitHub Pages on push)
-**Current build:** v23 (bottom-left corner of the app; bump on every deploy, see Conventions)
+**Current build:** v26 (bottom-left corner of the app; bump on every deploy, see Conventions)
 
 ## Orientation for a new agent
 
@@ -29,7 +29,9 @@ Two side-by-side SVG joysticks, controller-style:
 - **Modifier joystick** (right, 8 wedges): HiChord-style chord modifications (maj/min toggle, dom7, 7th, add9, sus4, add6/sus2, darken, aug) applied relative to whichever degree's natural quality is held — not always a major base. Labels are uppercase (`.joy-label`/`.joy-center-label`, by explicit user preference — an intermediate case-sensitive version was tried and reverted). Any label containing "/" (e.g. `MAJ/MIN`, `MAJ7/MIN7`) is split into two stacked `<tspan>` lines via `setWedgeLabel()`, since SVG `<text>` doesn't wrap and these are too wide for one line at wedge scale; once a chord resolves the quality-dependent wedges collapse back to one word (no slash) automatically.
 - **"left" (darken) direction**: deviates from the manual on purpose — major/minor both go to diminished, and diminished (vii°) steps to minor (the only way to reach a plain minor triad on that button, since nothing else produces one there).
 
-A `<select>` dropdown transposes all 7 degrees together (global key root, semitone offset from C). A second `<select>` picks the oscillator waveform (sine/square/sawtooth/triangle), applied to every voice via `osc.type`.
+A `<select>` dropdown transposes all 7 degrees together (global key root, semitone offset from C). A second `<select>` picks the oscillator waveform (sine/square/sawtooth/triangle), applied to every voice via `osc.type` — `setWaveType()` in `src/audio.js` also walks `audio.voices` so a change is audible on a chord that's already held, not just the next note. `audio.currentWaveType` is the single source of truth here; `src/settings.js` only wires the dropdown to it (it previously kept its own `settings.currentWaveType`, which nothing read — the dropdown silently did nothing).
+
+**Layout**: `.joysticks` is a CSS grid in both orientations, and every control (`.fx-toggles`, both `<select>`s) is a real grid child of it. Portrait stacks the two joysticks in rows 1–2 with all three controls sharing row 3; landscape puts the joysticks in columns 1 and 3 with the controls stacked down column 2. Nothing is absolutely positioned over the grid — an earlier version floated `.fx-toggles` on top with `z-index: 1000` and it swallowed taps meant for the dropdowns in landscape.
 
 Voices are tracked per-degree by absolute pitch (`degreeKey:semitone`) and reconciled on every change (chord press, joystick move, key change) so only notes that actually enter/leave the chord get started/stopped — shared tones sustain without re-triggering their envelope.
 
@@ -37,7 +39,7 @@ Full multi-touch: each finger tracked by touch identifier, can hold independent 
 
 **Stick dot**: a small circle on each joystick that follows the actual pointer/touch position (via `getScreenCTM()`, clamped to the wedge radius), giving the flat SVG pad a continuous analog-stick feel on top of the discrete wedge zones. Degree joystick gets one dot per active touch identifier (real multi-touch); modifier joystick gets one persistent dot (single-owner by design). `pointer-events: none`, `opacity: 0.6` so it doesn't obscure the label underneath.
 
-**Effects**: shared delay (DelayNode + feedback gain, defaults 280ms/32%/22% send) and algorithmic reverb (ConvolverNode with a synthesized impulse response — no external audio file, defaults 2.2s decay/18% send) are built lazily in `init()` (`src/effects.js`), one bus each shared by every voice. The "Delay"/"Reverb" buttons (top-left) each open a `<dialog>` with a checkbox (on/off, ramped 0↔normal over 50ms to avoid a click) and a range slider per parameter — delay gets time/feedback/send, reverb gets decay/send. Every slider updates live on `input` except reverb decay, which only commits on `change` since it regenerates the impulse response buffer. Both effects can be on, either alone, or neither, independent of each other and of their own parameter values.
+**Effects**: shared delay (DelayNode + feedback gain, defaults 280ms/32%/22% send) and algorithmic reverb (ConvolverNode with a synthesized impulse response — no external audio file, defaults 2.2s decay/18% send) are built lazily in `init()` (`src/effects.js`), one bus each shared by every voice. The "Delay"/"Reverb" buttons (in the center control column, alongside the key and waveform dropdowns) each open a `<dialog>` with a checkbox (on/off, ramped 0↔normal over 50ms to avoid a click) and a range slider per parameter — delay gets time/feedback/send, reverb gets decay/send. Every slider updates live on `input` except reverb decay, which only commits on `change` since it regenerates the impulse response buffer. Both effects can be on, either alone, or neither, independent of each other and of their own parameter values.
 
 ## PWA
 
