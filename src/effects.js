@@ -41,6 +41,14 @@ export function init() {
 
   effects.reverbSend.connect(effects.convolver);
   effects.convolver.connect(audio.ctx.destination);
+
+  // Feed the repeats into the reverb as well, not just the dry voices.
+  // Without this the echoes are completely dry: at short delay times they
+  // land while the original note's reverb tail is still ringing and pass as
+  // reverberant, but at long ones they arrive into silence and the space
+  // audibly drops out from the first repeat on. Safe from runaway because
+  // nothing downstream of the reverb feeds back into the delay.
+  effects.delayNode.connect(effects.reverbSend);
 }
 
 export function setDelayEnabled(enabled) {

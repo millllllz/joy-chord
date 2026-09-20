@@ -4,7 +4,7 @@ JoyChord is an installable PWA HiChord-inspired chord synthesizer. Web Audio API
 
 **Live:** https://millllllz.github.io/joy-chord/
 **Repo:** https://github.com/millllllz/joy-chord (public, `master` branch, deploys via GitHub Pages on push)
-**Current build:** v26 (bottom-left corner of the app; bump on every deploy, see Conventions)
+**Current build:** v27 (bottom-left corner of the app; bump on every deploy, see Conventions)
 
 ## Orientation for a new agent
 
@@ -40,6 +40,8 @@ Full multi-touch: each finger tracked by touch identifier, can hold independent 
 **Stick dot**: a small circle on each joystick that follows the actual pointer/touch position (via `getScreenCTM()`, clamped to the wedge radius), giving the flat SVG pad a continuous analog-stick feel on top of the discrete wedge zones. Degree joystick gets one dot per active touch identifier (real multi-touch); modifier joystick gets one persistent dot (single-owner by design). `pointer-events: none`, `opacity: 0.6` so it doesn't obscure the label underneath.
 
 **Effects**: shared delay (DelayNode + feedback gain, defaults 280ms/32%/22% send) and algorithmic reverb (ConvolverNode with a synthesized impulse response — no external audio file, defaults 2.2s decay/18% send) are built lazily in `init()` (`src/effects.js`), one bus each shared by every voice. The "Delay"/"Reverb" buttons (in the center control column, alongside the key and waveform dropdowns) each open a `<dialog>` with a checkbox (on/off, ramped 0↔normal over 50ms to avoid a click) and a range slider per parameter — delay gets time/feedback/send, reverb gets decay/send. Every slider updates live on `input` except reverb decay, which only commits on `change` since it regenerates the impulse response buffer. Both effects can be on, either alone, or neither, independent of each other and of their own parameter values.
+
+**Signal flow**: each voice sends dry to `destination` plus a parallel tap into each effect bus, and the delay's output feeds the reverb send as well as `destination` — so the echoes are reverberated rather than dry. That last edge matters more than it looks: without it the repeats are completely dry, which passes unnoticed at short delay times (they land while the original note's reverb tail is still ringing) but makes the space audibly drop out at long ones, since by then the tail is ~27dB down. Nothing downstream of the reverb returns to the delay, so there's no runaway path. `src/test-setup.js`'s mock node records its `connect()` calls so routing like this is assertable — state-only tests can't see a misrouted graph.
 
 ## PWA
 

@@ -78,6 +78,19 @@ describe('effects module', () => {
     expect(effects.delaySend.gain.value).not.toBe(0.9);
   });
 
+  it('routes the delay output into the reverb so repeats are not dry', () => {
+    init();
+    expect(effects.delayNode.connections).toContain(effects.reverbSend);
+    expect(effects.delayNode.connections).toContain(audio.ctx.destination);
+  });
+
+  it('does not feed the reverb back into the delay', () => {
+    init();
+    expect(effects.convolver.connections).not.toContain(effects.delaySend);
+    expect(effects.convolver.connections).not.toContain(effects.delayNode);
+    expect(effects.reverbSend.connections).not.toContain(effects.delayNode);
+  });
+
   it('regenerates the reverb impulse buffer when decay changes', () => {
     init();
     const before = effects.convolver.buffer;

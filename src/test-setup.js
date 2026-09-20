@@ -49,10 +49,14 @@ class MockAudioNode {
     this.delayTime = new MockAudioParam();
     this.type = 'sine';
     this.frequency = new MockAudioParam();
+    // Recorded so tests can assert signal routing, which is otherwise
+    // invisible to them — a misrouted node still passes every state check.
+    this.connections = [];
   }
 
   connect(dest) {
-    return this;
+    this.connections.push(dest);
+    return dest;
   }
 
   start() {}
