@@ -838,6 +838,29 @@
     updateFullscreenIcon();
   });
 
+  // --- Theme: update SVG gradients when theme changes ---
+  function updateSVGGradients() {
+    const computedStyle = getComputedStyle(document.documentElement);
+    const gradientLight = computedStyle.getPropertyValue('--gradient-light').trim();
+    const wedgeFill = computedStyle.getPropertyValue('--wedge-fill').trim();
+
+    const gradients = document.querySelectorAll('radialGradient');
+    gradients.forEach(grad => {
+      const stops = grad.querySelectorAll('stop');
+      if (stops.length >= 2) {
+        stops[0].setAttribute('stop-color', gradientLight);
+        stops[1].setAttribute('stop-color', wedgeFill);
+      }
+    });
+  }
+
+  updateSVGGradients();
+
+  // Listen for theme changes (system preference or manual toggle)
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateSVGGradients);
+  }
+
   // --- PWA: register the service worker for offline/installable support ---
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

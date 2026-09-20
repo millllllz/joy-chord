@@ -1,11 +1,44 @@
   :root {
-    color-scheme: dark;
+    color-scheme: light dark;
     --bg: #14161a;
+    --bg-gradient-stop: #23262c;
     --panel: #1e2126;
+    --panel-hover: #2c3038;
+    --wedge-fill: #22252a;
+    --wedge-stroke: #0c0d0f;
     --accent: #6ee7c9;
     --accent-active: #3fd8ac;
     --text: #e8eaed;
     --muted: #8a8f98;
+    --gradient-light: #3a3f47;
+    --label-active: #0d1f19;
+    --center-circle-stroke: rgba(255,255,255,0.08);
+    --stick-dot-stroke: rgba(0, 0, 0, 0.35);
+    --stick-dot-shadow: rgba(0, 0, 0, 0.45);
+    --debug-bg: rgba(0, 0, 0, 0.9);
+    --debug-text: #6ee7c9;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f5f5;
+      --bg-gradient-stop: #ffffff;
+      --panel: #efefef;
+      --panel-hover: #e0e0e0;
+      --wedge-fill: #e8e8e8;
+      --wedge-stroke: #d0d0d0;
+      --accent: #059669;
+      --accent-active: #10b981;
+      --text: #1a1a1a;
+      --muted: #666666;
+      --gradient-light: #f0f0f0;
+      --label-active: #ffffff;
+      --center-circle-stroke: rgba(0,0,0,0.08);
+      --stick-dot-stroke: rgba(255, 255, 255, 0.35);
+      --stick-dot-shadow: rgba(0, 0, 0, 0.15);
+      --debug-bg: rgba(255, 255, 255, 0.95);
+      --debug-text: #059669;
+    }
   }
   * { box-sizing: border-box; }
   html, body {
@@ -17,7 +50,7 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    background: radial-gradient(circle at 50% 20%, #23262c, var(--bg) 70%);
+    background: radial-gradient(circle at 50% 20%, var(--bg-gradient-stop), var(--bg) 70%);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: var(--text);
   }
@@ -116,8 +149,8 @@
   }
   .joy-wedge {
     cursor: pointer;
-    fill: #22252a;
-    stroke: #0c0d0f;
+    fill: var(--wedge-fill);
+    stroke: var(--wedge-stroke);
     stroke-width: 1;
     transition: fill 0.1s ease;
   }
@@ -146,11 +179,11 @@
     dominant-baseline: middle;
   }
   .joy-label.active {
-    fill: #0d1f19;
+    fill: var(--label-active);
   }
   .joy-center {
     fill: url(#centerGradient);
-    stroke: rgba(255,255,255,0.08);
+    stroke: var(--center-circle-stroke);
     stroke-width: 1;
     cursor: pointer;
   }
@@ -176,11 +209,11 @@
      shadow the wedges/center it's drawn on top of. */
   .stick-dot {
     fill: var(--accent);
-    stroke: rgba(0, 0, 0, 0.35);
+    stroke: var(--stick-dot-stroke);
     stroke-width: 2;
     pointer-events: none;
     opacity: 0.6;
-    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+    filter: drop-shadow(0 2px 3px var(--stick-dot-shadow));
     transition: cx 0.08s ease-out, cy 0.08s ease-out, opacity 0.12s ease;
   }
   .stick-dot.released {
@@ -191,8 +224,8 @@
      (I, ii, iii...) rather than uppercase modifier names */
   .degree-wedge {
     cursor: pointer;
-    fill: #22252a;
-    stroke: #0c0d0f;
+    fill: var(--wedge-fill);
+    stroke: var(--wedge-stroke);
     stroke-width: 1;
     transition: fill 0.1s ease;
   }
@@ -214,7 +247,7 @@
     transition: fill 0.1s ease;
   }
   .degree-label.active {
-    fill: #0d1f19;
+    fill: var(--label-active);
   }
   .degree-quality {
     font-size: 7px;
@@ -228,7 +261,7 @@
     opacity: 0.7;
   }
   .degree-quality.active {
-    fill: #0d1f19;
+    fill: var(--label-active);
     opacity: 0.85;
   }
 
@@ -237,7 +270,7 @@
     padding: 8px 14px;
     border-radius: 10px;
     border: none;
-    background: #22252a;
+    background: var(--panel);
     color: var(--text);
     font-size: 14px;
     font-weight: 700;
@@ -245,7 +278,7 @@
     cursor: pointer;
   }
   .key-select:hover {
-    background: #2c3038;
+    background: var(--panel-hover);
   }
 
   .fx-toggles {
@@ -260,7 +293,7 @@
     padding: 8px 12px;
     border-radius: 10px;
     border: none;
-    background: #22252a;
+    background: var(--panel);
     color: var(--muted);
     font-size: 12px;
     font-weight: 700;
@@ -270,11 +303,11 @@
     transition: background 0.1s ease, color 0.1s ease;
   }
   .fx-toggle:hover {
-    background: #2c3038;
+    background: var(--panel-hover);
   }
   .fx-toggle.active {
     background: var(--accent-active);
-    color: #0d1f19;
+    color: var(--label-active);
   }
 
   .fullscreen-btn {
@@ -286,7 +319,7 @@
     height: 44px;
     border-radius: 8px;
     border: none;
-    background: #22252a;
+    background: var(--panel);
     color: var(--muted);
     cursor: pointer;
     align-items: center;
@@ -301,7 +334,7 @@
     display: flex;
   }
   .fullscreen-btn:hover {
-    background: #2c3038;
+    background: var(--panel-hover);
     color: var(--text);
   }
   .fullscreen-btn svg {
@@ -329,8 +362,8 @@
     z-index: 2000;
     max-height: 40vh;
     overflow-y: auto;
-    background: rgba(0, 0, 0, 0.9);
-    color: #6ee7c9;
+    background: var(--debug-bg);
+    color: var(--debug-text);
     font-family: monospace;
     font-size: 11px;
     line-height: 1.5;
