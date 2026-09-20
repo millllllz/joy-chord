@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { settings, init as initSettings } from './settings.js';
+import { settings, setKeyRoot, setWaveType } from './settings.js';
 
 describe('settings module', () => {
   beforeEach(() => {
@@ -9,19 +9,19 @@ describe('settings module', () => {
 
   it('tracks current key root', () => {
     expect(settings.currentKeyRoot).toBe(0);
-    settings.setKeyRoot(3);
+    setKeyRoot(3);
     expect(settings.currentKeyRoot).toBe(3);
   });
 
   it('ignores duplicate key root changes', () => {
-    settings.setKeyRoot(3);
-    settings.setKeyRoot(3);
+    setKeyRoot(3);
+    setKeyRoot(3);
     expect(settings.currentKeyRoot).toBe(3);
   });
 
   it('tracks current waveform type', () => {
     expect(settings.currentWaveType).toBe('sine');
-    settings.setWaveType('square');
+    setWaveType('square');
     expect(settings.currentWaveType).toBe('square');
   });
 

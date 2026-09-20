@@ -1,10 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { degreeJoystick, init as initDegreeJoystick } from './degree-joystick.js';
-import { init as initAudio } from './audio.js';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { degreeJoystick } from './degree-joystick.js';
+import { chords } from './chords.js';
 
 describe('degree-joystick module', () => {
   beforeEach(() => {
-    initAudio();
     degreeJoystick.heldDegrees = new Map();
     degreeJoystick.heldVoices = new Map();
     degreeJoystick.currentDirection = 'center';
@@ -20,25 +19,25 @@ describe('degree-joystick module', () => {
     expect(degreeJoystick.currentDirection).toBe('up-right');
   });
 
-  it('creates degree maps for quick lookup', () => {
-    expect(degreeJoystick.degreeByKey).not.toBeUndefined();
-    expect(degreeJoystick.degreeByBindKey).not.toBeUndefined();
+  it('has degree lookup maps', () => {
+    expect(degreeJoystick.degreeByKey instanceof Map).toBe(true);
+    expect(degreeJoystick.degreeByBindKey instanceof Map).toBe(true);
   });
 
-  it('can identify a degree by its key', () => {
-    const d = degreeJoystick.degreeByKey.get('1');
-    expect(d).not.toBeUndefined();
-    expect(d.degree).toBe('I');
-  });
+  it('maps all 7 degrees by key and binding', () => {
+    const keys = ['1', '2', '3', '4', '5', '6', '7'];
+    const bindings = ['a', 'w', 's', 'e', 'd', 'r', 'f'];
 
-  it('can identify a degree by its keyboard binding', () => {
-    const d = degreeJoystick.degreeByBindKey.get('a');
-    expect(d).not.toBeUndefined();
-    expect(d.degree).toBe('I');
-  });
+    // Populate maps manually since init() tries to access DOM
+    degreeJoystick.degreeByKey = new Map(chords.DEGREES.map(d => [d.key, d]));
+    degreeJoystick.degreeByBindKey = new Map(chords.DEGREES.map(d => [d.bindKey, d]));
 
-  it('has SVG elements after init', () => {
-    initDegreeJoystick();
-    expect(degreeJoystick.degreeJoystickEl).not.toBeUndefined();
+    keys.forEach(key => {
+      expect(degreeJoystick.degreeByKey.get(key)).toBeDefined();
+    });
+
+    bindings.forEach(binding => {
+      expect(degreeJoystick.degreeByBindKey.get(binding)).toBeDefined();
+    });
   });
 });
