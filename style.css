@@ -138,6 +138,12 @@
       flex-direction: column;
       gap: 4px;
     }
+    /* The two fieldsets follow suit: buttons/selects stack vertically to
+       match the vertical .controls column, instead of staying in rows. */
+    .fx-toggles,
+    .sound-controls {
+      flex-direction: column;
+    }
   }
   /* Shared wedge styles for both joysticks (8-wedge chord + 7-wedge degree).
      Every wedge path carries .wedge; the .joy-wedge/.degree-wedge classes
@@ -296,12 +302,43 @@
     background: var(--panel-hover);
   }
 
-  .fx-toggles {
+  /* Both control-group fieldsets share a reset (no default browser border/
+     padding) and a small uppercase legend; only their item axis differs. */
+  .fx-toggles,
+  .sound-controls {
+    border: none;
+    margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
     gap: 4px;
+  }
+  /* flex-basis: 100% reliably forces the legend onto its own line when the
+     fieldset is a row (basis = width) — but in the landscape column layout
+     (basis = height) it would stretch the legend to fill the container
+     instead, so that axis pins it to auto width/margin-centering there. */
+  .fx-toggles legend,
+  .sound-controls legend {
+    flex-basis: 100%;
+    padding: 0 0 2px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+  @media (orientation: landscape) {
+    .fx-toggles legend,
+    .sound-controls legend {
+      flex-basis: auto;
+      width: 100%;
+    }
+  }
+  .sound-controls {
+    gap: 8px;
   }
   .fx-toggle {
     padding: 4px 8px;
