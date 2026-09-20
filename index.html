@@ -96,6 +96,21 @@
     </form>
   </dialog>
 
+  <dialog class="fx-dialog" id="glide-dialog">
+    <form method="dialog" class="fx-dialog-form">
+      <h2>Glide</h2>
+      <label class="fx-dialog-enable">
+        <input type="checkbox" id="glide-enabled-checkbox">
+        Enabled
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Time <span class="fx-dialog-value" id="glide-time-value">120ms</span></span>
+        <input type="range" id="glide-time-slider" min="0.02" max="0.4" step="0.01" value="0.12">
+      </label>
+      <button type="submit" class="fx-dialog-close">Close</button>
+    </form>
+  </dialog>
+
   <button class="fullscreen-btn" id="fullscreen-btn" aria-label="Toggle fullscreen" type="button">
     <svg id="fullscreen-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
@@ -105,7 +120,7 @@
     </svg>
   </button>
 
-  <div class="build-version">v34</div>
+  <div class="build-version">v35</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -125,6 +140,7 @@
         <button class="fx-toggle" id="reverb-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Reverb</button>
         <button class="fx-toggle" id="filter-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Filter</button>
         <button class="fx-toggle" id="tremolo-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Tremolo</button>
+        <button class="fx-toggle" id="glide-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Glide</button>
       </div>
       <select class="key-select" id="key-select"></select>
       <select class="key-select wave-select" id="wave-select"></select>

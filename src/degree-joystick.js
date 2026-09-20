@@ -1,4 +1,4 @@
-import { audio, startVoice, stopVoice, noteFreq } from './audio.js';
+import { stopVoice, noteFreq, reconcileVoices } from './audio.js';
 import { effects } from './effects.js';
 import { chords, getChordIntervals } from './chords.js';
 import { settings } from './settings.js';
@@ -94,8 +94,17 @@ export function init() {
     const d = degreeAtPoint(touch.clientX, touch.clientY);
     const newKey = d ? d.key : null;
     if (newKey === currentKey) return;
-    if (currentKey) releaseDegree(degreeJoystick.degreeByKey.get(currentKey));
-    if (d) pressDegree(d);
+    // Sliding straight onto a new wedge goes through pressDegree alone —
+    // its own monophonic steal logic releases currentKey, and (with glide
+    // on) captures its voices for reconcileVoices before that release
+    // clears them. Releasing here first, as a separate step, would empty
+    // heldDegrees before pressDegree ever saw it, making glide unreachable
+    // by touch-dragging. Only a drag off every wedge (d is null) hard-stops.
+    if (d) {
+      pressDegree(d);
+    } else if (currentKey) {
+      releaseDegree(degreeJoystick.degreeByKey.get(currentKey));
+    }
     degreeJoystick.touchedDegreeKey = newKey;
   }, { passive: false });
 
@@ -180,25 +189,55 @@ function voicesForDegree(d, direction) {
   return target;
 }
 
+// Ids are `${degreeKey}:${semitone}`, so the frequency is recoverable from
+// the id alone without a live audio-node lookup — used to build the "old"
+// side of a reconcileVoices() call from bookkeeping (heldVoices) rather
+// than from the nodes themselves.
+function noteFreqFromId(id) {
+  return noteFreq(Number(id.split(':')[1]));
+}
+
 function updateDegreeVoicing(d, direction) {
-  const target = voicesForDegree(d, direction);
+  const oldTarget = new Map();
   (degreeJoystick.heldVoices.get(d.key) || new Set()).forEach(id => {
-    if (!target.has(id)) stopVoice(id);
+    oldTarget.set(id, noteFreqFromId(id));
   });
-  target.forEach((freq, id) => startVoice(id, freq));
+  const target = voicesForDegree(d, direction);
+  reconcileVoices(oldTarget, target);
   degreeJoystick.heldVoices.set(d.key, new Set(target.keys()));
+}
+
+// Clears one degree's held/visual state without touching its voices —
+// pressDegree uses this for the degree(s) it's stealing from, so the voice
+// stop/start/glide decision is left to reconcileVoices instead of being
+// forced here.
+function clearDegreeState(d) {
+  degreeJoystick.heldDegrees.delete(d.key);
+  degreeJoystick.heldVoices.delete(d.key);
+  d.wedgeEl.classList.remove('active');
+  d.labelEl.classList.remove('active');
+  d.qualityEl.classList.remove('active');
 }
 
 function pressDegree(d) {
   if (degreeJoystick.heldDegrees.has(d.key)) return;
   // Monophonic by degree: a new one takes over from whatever was sounding,
-  // so keyboard and mouse can't stack chords either. Snapshot the keys
-  // first, since releaseDegree deletes from the map being walked.
+  // so keyboard and mouse can't stack chords either. Collect the outgoing
+  // voices before clearing bookkeeping, so reconcileVoices can glide the
+  // ones that carry over into the new chord (with glide on) rather than
+  // always hard-stopping them.
+  const oldTarget = new Map();
   [...degreeJoystick.heldDegrees.keys()].forEach(key => {
-    releaseDegree(degreeJoystick.degreeByKey.get(key));
+    const heldD = degreeJoystick.degreeByKey.get(key);
+    (degreeJoystick.heldVoices.get(key) || new Set()).forEach(id => oldTarget.set(id, noteFreqFromId(id)));
+    clearDegreeState(heldD);
   });
+
   degreeJoystick.heldDegrees.set(d.key, degreeJoystick.currentDirection);
-  updateDegreeVoicing(d, degreeJoystick.currentDirection);
+  const target = voicesForDegree(d, degreeJoystick.currentDirection);
+  reconcileVoices(oldTarget, target);
+  degreeJoystick.heldVoices.set(d.key, new Set(target.keys()));
+
   d.wedgeEl.classList.add('active');
   d.labelEl.classList.add('active');
   d.qualityEl.classList.add('active');
@@ -207,12 +246,11 @@ function pressDegree(d) {
 
 function releaseDegree(d) {
   if (!degreeJoystick.heldDegrees.has(d.key)) return;
-  degreeJoystick.heldDegrees.delete(d.key);
+  // A genuine note-off (finger/key lifted with nothing taking over) always
+  // hard-stops — there's no successor chord for reconcileVoices to glide
+  // these voices into.
   (degreeJoystick.heldVoices.get(d.key) || new Set()).forEach(id => stopVoice(id));
-  degreeJoystick.heldVoices.delete(d.key);
-  d.wedgeEl.classList.remove('active');
-  d.labelEl.classList.remove('active');
-  d.qualityEl.classList.remove('active');
+  clearDegreeState(d);
   updateQualityWedgeLabels();
 }
 

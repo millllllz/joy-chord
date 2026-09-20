@@ -8,6 +8,8 @@ export const audio = {
   FREQ_C4: 261.63,
   REVERB_DECAY: 2.2,
   currentWaveType: 'sine',
+  glideEnabled: false,
+  GLIDE_TIME: 0.12,
 };
 
 export function init() {
@@ -80,4 +82,60 @@ export function setWaveType(type) {
   // Retune sustaining voices too, so the change is audible while a chord
   // is still held rather than only on the next note.
   audio.voices.forEach(({ osc }) => { osc.type = type; });
+}
+
+export function setGlideEnabled(enabled) {
+  audio.glideEnabled = enabled;
+}
+
+export function setGlideTime(seconds) {
+  audio.GLIDE_TIME = seconds;
+}
+
+// Slides an existing, still-sounding voice to a new pitch/id instead of
+// stopping and restarting it — same oscillator and gain node throughout, so
+// there's no retriggered attack, just a pitch ramp. Re-keying audio.voices
+// from oldId to newId keeps later lookups (stopVoice, another glide) working
+// under the id the voice is now logically playing.
+export function glideVoice(oldId, newId, newFreq) {
+  const voice = audio.voices.get(oldId);
+  if (!voice) {
+    startVoice(newId, newFreq);
+    return;
+  }
+  const { osc } = voice;
+  const now = audio.ctx.currentTime;
+  osc.frequency.cancelScheduledValues(now);
+  osc.frequency.setValueAtTime(osc.frequency.value, now);
+  osc.frequency.linearRampToValueAtTime(newFreq, now + audio.GLIDE_TIME);
+
+  audio.voices.delete(oldId);
+  audio.voices.set(newId, voice);
+}
+
+// Reconciles a voicing transition from oldTarget to newTarget (both
+// Map<id, freq>). Ids present in both are already correct and untouched
+// (startVoice no-ops on an existing id). The rest — ids only in oldTarget
+// ("stale") and only in newTarget ("fresh") — are either hard
+// stopped/started, or, with glide on, paired off nearest-pitch-to-
+// nearest-pitch and glided; any surplus on the longer side (the chord grew
+// or shrank) still hard starts/stops since it has no pairing partner.
+export function reconcileVoices(oldTarget, newTarget) {
+  const staleIds = [...oldTarget.keys()].filter(id => !newTarget.has(id));
+  const freshIds = [...newTarget.keys()].filter(id => !oldTarget.has(id));
+
+  if (!audio.glideEnabled) {
+    staleIds.forEach(stopVoice);
+    freshIds.forEach(id => startVoice(id, newTarget.get(id)));
+    return;
+  }
+
+  staleIds.sort((a, b) => oldTarget.get(a) - oldTarget.get(b));
+  freshIds.sort((a, b) => newTarget.get(a) - newTarget.get(b));
+  const pairCount = Math.min(staleIds.length, freshIds.length);
+  for (let i = 0; i < pairCount; i++) {
+    glideVoice(staleIds[i], freshIds[i], newTarget.get(freshIds[i]));
+  }
+  staleIds.slice(pairCount).forEach(stopVoice);
+  freshIds.slice(pairCount).forEach(id => startVoice(id, newTarget.get(id)));
 }

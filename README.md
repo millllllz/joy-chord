@@ -4,7 +4,7 @@ JoyChord is an installable PWA HiChord-inspired chord synthesizer. Web Audio API
 
 **Live:** https://millllllz.github.io/joy-chord/
 **Repo:** https://github.com/millllllz/joy-chord (public, `master` branch, deploys via GitHub Pages on push)
-**Current build:** v34 (bottom-left corner of the app; bump on every deploy, see Conventions)
+**Current build:** v35 (bottom-left corner of the app; bump on every deploy, see Conventions)
 
 ## Orientation for a new agent
 
@@ -36,6 +36,8 @@ A `<select>` dropdown transposes all 7 degrees together (global key root, semito
 Voices are tracked per-degree by absolute pitch (`degreeKey:semitone`) and reconciled on every change (chord press, joystick move, key change) so only notes that actually enter/leave the chord get started/stopped — shared tones sustain without re-triggering their envelope.
 
 **One degree sounds at a time.** `pressDegree()` releases whatever was held before starting the new one, so no input can stack two chords — the degree stick takes a single owning touch (`degreeTouchId`) and ignores further fingers until it lifts, and on the keyboard a second degree key steals from the first rather than adding to it. Note this makes the *degree* monophonic, not the synth: a degree is still a full chord of simultaneous voices, and the modifier stick is independently held on top of it. Lifting an ignored second finger deliberately doesn't end the owning touch.
+
+**Glide** (off by default; toggle + a 20-400ms time slider, default 120ms, in the "Glide" dialog): when on, `audio.reconcileVoices()` — the same function that already diffs an old chord's voice ids against a new chord's and leaves ids common to both untouched — pairs off the *leftover* ids (present in only one side) nearest-pitch-to-nearest-pitch and slides each pair with `glideVoice()` (same oscillator/gain node throughout, no retriggered attack, just `osc.frequency.linearRampToValueAtTime()`) instead of hard `stopVoice()`/`startVoice()`-ing them. Any surplus when the chord grows or shrinks (a triad gaining a 7th, say) still hard starts/stops since it has no pairing partner. `pressDegree()`'s monophonic steal now hands its outgoing voices to this same reconciliation instead of always releasing them outright, so a chord-to-chord change can glide too, not just a same-degree modifier change. This only reaches degree changes made via a *rolling* transition — a keyboard press while the previous key is still down, or a touch dragged straight from one wedge onto another (the `touchmove` handler presses the new wedge without releasing the old one first, so `pressDegree()`'s steal logic sees it still held) — a lift-then-press, or a mouse drag across the gap between wedges, is a genuine note-off with nothing to glide into, so it hard-stops as before.
 
 The modifier joystick is likewise single-owner. Each still tracks its touch by identifier, and both can be held at once (one finger per stick), so dragging between wedges without lifting works on either. `:hover` CSS is scoped to `@media (hover: hover)` since touch leaves a wedge "stuck" in `:hover` on most mobile browsers after a drag — touch relies solely on the JS-driven `.active` class.
 

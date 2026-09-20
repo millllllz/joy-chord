@@ -1,4 +1,4 @@
-import { init as initAudio } from './audio.js';
+import { init as initAudio, audio, setGlideEnabled, setGlideTime } from './audio.js';
 import {
   init as initEffects,
   effects,
@@ -139,6 +139,25 @@ wireFxDialog({
       valueEl: document.getElementById('tremolo-depth-value'),
       format: (v) => `${Math.round(v * 100)}%`,
       onInput: setTremoloDepth,
+    },
+  ],
+});
+
+// Not an audio-node insert like the other three — glide changes how note
+// transitions behave, not a node in the signal graph — but it reuses the
+// same checkbox+slider dialog shape via wireFxDialog for a consistent feel.
+wireFxDialog({
+  toggleBtn: document.getElementById('glide-toggle'),
+  dialog: document.getElementById('glide-dialog'),
+  enabledCheckbox: document.getElementById('glide-enabled-checkbox'),
+  isEnabled: () => audio.glideEnabled,
+  setEnabled: setGlideEnabled,
+  sliders: [
+    {
+      slider: document.getElementById('glide-time-slider'),
+      valueEl: document.getElementById('glide-time-value'),
+      format: (v) => `${Math.round(v * 1000)}ms`,
+      onInput: setGlideTime,
     },
   ],
 });
