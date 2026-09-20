@@ -842,14 +842,14 @@
   function updateSVGGradients() {
     const computedStyle = getComputedStyle(document.documentElement);
     const gradientLight = computedStyle.getPropertyValue('--gradient-light').trim();
-    const wedgeFill = computedStyle.getPropertyValue('--wedge-fill').trim();
+    const gradientDark = computedStyle.getPropertyValue('--gradient-dark').trim();
 
     const gradients = document.querySelectorAll('radialGradient');
     gradients.forEach(grad => {
       const stops = grad.querySelectorAll('stop');
       if (stops.length >= 2) {
         stops[0].setAttribute('stop-color', gradientLight);
-        stops[1].setAttribute('stop-color', wedgeFill);
+        stops[1].setAttribute('stop-color', gradientDark);
       }
     });
   }

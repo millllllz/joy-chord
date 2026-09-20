@@ -54,6 +54,7 @@ export function startVoice(id, freq) {
 
   osc.connect(gainNode);
   gainNode.connect(audio.ctx.destination);
+  osc.start();
 
   audio.voices.set(id, { osc, gainNode });
 }

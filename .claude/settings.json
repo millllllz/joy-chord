@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "on_file_change": [
+      {
+        "match": "src/**/*.{js,test.js}",
+        "run": "npm test"
+      }
+    ]
+  }
+}

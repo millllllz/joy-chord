@@ -11,6 +11,7 @@
     --text: #e8eaed;
     --muted: #8a8f98;
     --gradient-light: #3a3f47;
+    --gradient-dark: #22252a;
     --label-active: #0d1f19;
     --center-circle-stroke: rgba(255,255,255,0.08);
     --stick-dot-stroke: rgba(0, 0, 0, 0.35);
@@ -32,6 +33,7 @@
       --text: #1a1a1a;
       --muted: #666666;
       --gradient-light: #f0f0f0;
+      --gradient-dark: #e0e0e0;
       --label-active: #ffffff;
       --center-circle-stroke: rgba(0,0,0,0.08);
       --stick-dot-stroke: rgba(255, 255, 255, 0.35);

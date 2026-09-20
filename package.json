@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "dev": "python3 -m http.server 8000",
     "test": "vitest",
+    "test:watch": "vitest --watch",
     "test:ui": "vitest --ui"
   },
   "devDependencies": {
