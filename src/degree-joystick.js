@@ -52,7 +52,11 @@ export function init() {
   const degreeCenterLabel = svgEl('text', { class: 'degree-center-label', x: 110, y: 110 });
   degreeJoystick.degreeJoystickEl.appendChild(degreeCenterLabel);
 
-  degreeJoystick.degreeMouseDot = svgEl('circle', { class: 'stick-dot', cx: 110, cy: 110, r: 14 });
+  // Starts hidden: this dot tracks the mouse only, and touch gets its own
+  // dot per identifier below. On a touch device no mousemove ever fires, so
+  // without this it would sit parked at dead centre forever alongside the
+  // finger's dot, reading as a second stuck touch point.
+  degreeJoystick.degreeMouseDot = svgEl('circle', { class: 'stick-dot released', cx: 110, cy: 110, r: 14 });
   degreeJoystick.degreeJoystickEl.appendChild(degreeJoystick.degreeMouseDot);
 
   // Mouse interaction
@@ -62,9 +66,13 @@ export function init() {
   });
 
   degreeJoystick.degreeJoystickEl.addEventListener('mousemove', (e) => {
+    degreeJoystick.degreeMouseDot.classList.remove('released');
     moveStickDot(degreeJoystick.degreeMouseDot, degreeJoystick.degreeJoystickEl, e.clientX, e.clientY);
   });
-  degreeJoystick.degreeJoystickEl.addEventListener('mouseleave', () => resetStickDot(degreeJoystick.degreeMouseDot));
+  degreeJoystick.degreeJoystickEl.addEventListener('mouseleave', () => {
+    resetStickDot(degreeJoystick.degreeMouseDot);
+    degreeJoystick.degreeMouseDot.classList.add('released');
+  });
 
   // Touch interaction
   degreeJoystick.degreeJoystickEl.addEventListener('touchstart', (e) => {
