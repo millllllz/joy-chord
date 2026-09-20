@@ -136,13 +136,21 @@
       grid-column: 2;
       grid-row: 1;
       flex-direction: column;
+      /* Portrait's wrap exists so an overlong row breaks onto more rows;
+         in landscape that would instead put the FX and Sound fieldsets
+         side by side in a second column once they overflow the row's
+         height, which reads as "not stacked" — force a single column. */
+      flex-wrap: nowrap;
       gap: 4px;
     }
     /* The two fieldsets follow suit: buttons/selects stack vertically to
-       match the vertical .controls column, instead of staying in rows. */
+       match the vertical .controls column, instead of staying in rows.
+       nowrap for the same reason as .controls above — otherwise an
+       overflowing column of buttons breaks sideways into a second column. */
     .fx-toggles,
     .sound-controls {
       flex-direction: column;
+      flex-wrap: nowrap;
     }
   }
   /* Shared wedge styles for both joysticks (8-wedge chord + 7-wedge degree).
