@@ -5,7 +5,8 @@
     --panel: #1e2126;
     --panel-hover: #2c3038;
     --wedge-fill: #22252a;
-    --wedge-stroke: #0c0d0f;
+    /* --wedge-stroke: #0c0d0f; */
+    --wedge-stroke: var(--bg);
     --accent: #6ee7c9;
     --accent-active: #3fd8ac;
     --text: #e8eaed;
@@ -28,7 +29,8 @@
       --panel: #efefef;
       --panel-hover: #e0e0e0;
       --wedge-fill: #e8e8e8;
-      --wedge-stroke: #d0d0d0;
+      /* --wedge-stroke: #d0d0d0; */
+      --wedge-stroke: var(--bg);
       --accent: #059669;
       --accent-active: #10b981;
       --text: #1a1a1a;
@@ -155,7 +157,9 @@
       align-self: start;
     }
   }
-  .joy-wedge {
+  /* Shared wedge styles for both joysticks (8-wedge chord + 7-wedge degree). */
+  .joy-wedge,
+  .degree-wedge {
     cursor: pointer;
     fill: var(--wedge-fill);
     stroke: var(--wedge-stroke);
@@ -163,8 +167,9 @@
     stroke-linejoin: round;
     transition: fill 0.1s ease;
   }
-  .joy-wedge.active {
-    fill: var(--accent-active);
+  .joy-wedge.active,
+  .degree-wedge.active {
+    fill: var(--accent);
   }
   /* :hover only for devices that actually have a hover-capable pointer —
      on touch, a tap leaves the wedge "stuck" in :hover (most mobile
@@ -172,8 +177,9 @@
      a new wedge left the old one still highlighted alongside the new
      one's JS-driven .active fill. */
   @media (hover: hover) {
-    .joy-wedge:hover {
-      fill: var(--accent-active);
+    .joy-wedge:hover,
+    .degree-wedge:hover {
+      fill: var(--accent);
     }
   }
   .joy-label {
@@ -245,22 +251,8 @@
   }
 
   /* degree joystick: 7 wedges instead of 8, plain-text degree labels
-     (I, ii, iii...) rather than uppercase modifier names */
-  .degree-wedge {
-    cursor: pointer;
-    fill: var(--wedge-fill);
-    stroke: var(--wedge-stroke);
-    stroke-width: 1;
-    transition: fill 0.1s ease;
-  }
-  .degree-wedge.active {
-    fill: var(--accent);
-  }
-  @media (hover: hover) {
-    .degree-wedge:hover {
-      fill: var(--accent);
-    }
-  }
+     (I, ii, iii...) rather than uppercase modifier names. Wedge fill/hover/
+     active styles are shared with .joy-wedge above. */
   .degree-label {
     font-size: 15px;
     font-weight: 700;
