@@ -43,6 +43,14 @@
   * { box-sizing: border-box; }
   html, body {
     height: 100%;
+    /* iOS Safari sizes the initial containing block — what height: 100%
+       resolves against — to the *large* viewport, i.e. as if the toolbars
+       were hidden. A 100%-tall shell therefore runs on underneath them,
+       and overflow: hidden means there's no scrolling to reach what's
+       under there. dvh tracks the viewport that's actually visible and
+       reflows when the toolbars slide away; the 100% above stays as the
+       fallback for anything that doesn't support it. */
+    height: 100dvh;
     overflow: hidden;
   }
   body {
@@ -74,44 +82,55 @@
     text-align: center;
     box-sizing: border-box;
   }
-  /* Portrait: joysticks stacked one above the other, with the controls
-     sandwiched between them as a single row. grid-template-rows gives the
-     two joystick rows an equal *share of whatever's actually left* after
-     the controls row takes what it needs (1fr auto 1fr) — height: 100%
-     makes that a real, definite budget (inherited from .synth's own
-     flex-resolved height) rather than each joystick sizing itself off a
-     fixed dvh fraction independent of how tall .controls happens to be.
-     That fixed-fraction approach (45dvh per stick) is what let the bottom
-     joystick get clipped off-screen once .controls grew past whatever
-     height 45dvh*2 had left room for — body has overflow: hidden, so
-     there was no scrolling to reach it. */
+  /* Portrait: degree stick, controls, modifier stick stacked top to bottom
+     in DOM order. Flex rather than grid, because "give the two sticks an
+     equal share of whatever the controls leave behind" is exactly what
+     flex: 1 1 0 with min-height: 0 means — no track minimums, and nothing
+     for a child to resolve a percentage against.
+
+     Both sticks are <svg viewBox="0 0 220 220"> with no width/height
+     attributes, so preserveAspectRatio (xMidYMid meet, the default)
+     already draws a centred *square* pad inside whatever box the element
+     is given. The box itself never has to be square, and that's what lets
+     the aspect-ratio / max-width / height: 100% juggling go away entirely.
+
+     That juggling is what broke on iOS Safari. A percentage-height grid
+     item sitting in an fr track has to resolve 100% against its own row;
+     resolve it against the grid *container* instead (engines differ here,
+     and the same circularity already cost .synth a min-height: 0 above)
+     and the item comes out around twice its row, whereupon align-items:
+     center spills the excess symmetrically in both directions. The bottom
+     (modifier) stick's box rode up over the controls that way, and since
+     the <svg> paints later it won hit-testing too — so every tap meant for
+     a button landed on the joystick instead and was preventDefault()ed.
+     A flex item with flex: 1 1 0 and min-height: 0 cannot exceed its share
+     of the line in any engine, so sticks and controls can no longer
+     overlap at all. */
   .joysticks {
-    display: grid;
-    grid-template-columns: repeat(3, auto);
-    grid-template-rows: 1fr auto 1fr;
-    justify-content: center;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     gap: 4px;
     margin: 0;
     width: 100%;
     height: 100%;
+    min-height: 0;
   }
   .joystick {
-    width: auto;
-    height: 100%;
-    max-width: 96vw;
-    aspect-ratio: 1;
+    flex: 1 1 0;
+    /* The same auto-minimum trap .synth hit above: a flex item's default
+       minimum is content-based, which would floor each stick and push the
+       stack taller than the space there actually is. */
+    min-height: 0;
+    width: 100%;
     user-select: none;
     -webkit-user-select: none;
   }
-  .joysticks #degree-joystick {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    justify-self: center;
-  }
   .joysticks .controls {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    /* Sized by its own content and centred, never stretched to the full
+       width the sticks take. */
+    flex: 0 0 auto;
+    align-self: center;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -132,46 +151,25 @@
     border: 1px solid var(--panel-hover);
     border-radius: 8px;
   }
-  .joysticks #joystick {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    justify-self: center;
-  }
 
-  /* Landscape: give the joysticks the whole viewport height (they're square,
-     so height is the binding dimension), with the controls stacked in the
-     center column between them. */
+  /* Landscape: the same three children in the same DOM order, laid out
+     left to right instead — sticks taking an equal share of the width with
+     the controls column between them. */
   @media (orientation: landscape) {
     .joysticks {
-      grid-template-columns: 1fr auto 1fr;
-      /* Landscape puts everything in a single grid-row: 1 (columns do the
-         left/middle/right split) — override the portrait rule's
-         1fr auto 1fr rows, or an empty, unused row 3 would still claim
-         its 1fr share of .joysticks' height and leave row 1 (where
-         everything actually lives) with only half the space. */
-      grid-template-rows: 1fr;
-      column-gap: 4px;
-      row-gap: 4px;
+      flex-direction: row;
     }
     .joystick {
-      /* fill whatever width the 1fr grid track actually has (so it can
-         never overflow past the control column, however wide that gets)
-         and stay square via aspect-ratio; max-width is just a ceiling for
-         when the track has more room than the viewport is tall */
-      width: 100%;
-      max-width: 96dvh;
-    }
-    .joysticks #degree-joystick {
-      grid-column: 1;
-      grid-row: 1;
-    }
-    .joysticks #joystick {
-      grid-column: 3;
-      grid-row: 1;
+      /* Main axis is horizontal here, so the equal share flex: 1 1 0 hands
+         out is width, and min-width is the auto-minimum to neutralise.
+         Height is the cross axis: a replaced element won't stretch on its
+         own, so it's set explicitly — a plain percentage against a
+         definite flex container, not against an fr track. */
+      min-width: 0;
+      width: auto;
+      height: 100%;
     }
     .joysticks .controls {
-      grid-column: 2;
-      grid-row: 1;
       flex-direction: column;
       /* Portrait's wrap exists so an overlong row breaks onto more rows;
          in landscape that would instead put the FX and Sound sub-groups
