@@ -127,6 +127,12 @@
     -webkit-user-select: none;
   }
   .joysticks .controls {
+    /* Minimum touch target for every button/select inside (inherited via
+       the custom property). 44px is the usual guideline and portrait has
+       the room for it; landscape overrides it below, because there the
+       controls and the two sticks are competing for the same scarce
+       vertical space and 44px would push the panel back off-screen. */
+    --touch-target: 44px;
     /* Sized by its own content and centred, never stretched to the full
        width the sticks take. */
     flex: 0 0 auto;
@@ -170,6 +176,7 @@
       height: 100%;
     }
     .joysticks .controls {
+      --touch-target: 32px;
       flex-direction: column;
       /* Portrait's wrap exists so an overlong row breaks onto more rows;
          in landscape that would instead put the FX and Sound sub-groups
@@ -178,14 +185,23 @@
       flex-wrap: nowrap;
       gap: 4px;
     }
-    /* The two sub-groups follow suit: buttons/selects stack vertically to
-       match the vertical .controls column, instead of staying in rows.
-       nowrap for the same reason as .controls above — otherwise an
-       overflowing column of buttons breaks sideways into a second column. */
+    /* The two sub-groups lay their items out two-up instead of in one tall
+       stack. One stack of 11 items came to a fixed 316px whatever the
+       viewport was, so it was simply cut off on any landscape phone whose
+       visible height lands under that (iOS Safari's toolbar/tab bar puts a
+       13 mini well under it) — and bigger touch targets would have made
+       that worse, not better. Two columns trade width, which landscape has
+       in abundance, for the height it doesn't: ~180px wide instead of
+       ~100px, but roughly 220px tall instead of 316px. The two *groups*
+       still read as stacked, which is the part that matters. */
     .fx-toggles,
     .sound-controls {
-      flex-direction: column;
-      flex-wrap: nowrap;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
+    .controls-group-label {
+      grid-column: 1 / -1;
     }
   }
   /* Shared wedge styles for both joysticks (8-wedge chord + 7-wedge degree).
@@ -344,6 +360,7 @@
   }
 
   .key-select {
+    min-height: var(--touch-target);
     padding: 5px 8px;
     border-radius: 6px;
     border: none;
@@ -371,21 +388,31 @@
     gap: 4px;
   }
   /* This rule has no media guard, so in source order it would otherwise
-     beat the landscape flex-direction: column override above it (same
-     selector, same specificity — last one in the cascade wins regardless
-     of which came first or which media query it's nested in). Restating
-     the landscape axis here, after it, is what actually makes it stick. */
+     beat the landscape override above it (same selector, same specificity —
+     last one in the cascade wins regardless of which came first or which
+     media query it's nested in). Restating the landscape layout here,
+     after it, is what actually makes it stick — including display itself,
+     since the flex above would otherwise cancel the grid. */
   @media (orientation: landscape) {
     .fx-toggles,
     .sound-controls {
-      flex-direction: column;
-      flex-wrap: nowrap;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    /* An odd number of buttons leaves the last one alone on its row, which
+       reads as unbalanced (the same orphan-row problem the wrapping
+       portrait row has). The group's first child is its label, so a last
+       button at an even position is the one with no partner — let it span
+       instead, which also makes it a wider target. Self-correcting: add a
+       sixth FX button and it pairs up, and the rule stops matching. */
+    .fx-toggle:last-child:nth-child(even) {
+      grid-column: 1 / -1;
     }
   }
   /* flex-basis: 100% reliably forces the label onto its own line when the
-     group is a row (basis = width) — but in the landscape column layout
-     (basis = height) it would stretch the label to fill the container
-     instead, so that axis pins it to auto width/margin-centering there. */
+     group is a row (basis = width). Landscape lays the group out as a
+     two-column grid instead, where spanning both columns is what puts the
+     label on its own line. */
   .controls-group-label {
     flex-basis: 100%;
     padding: 0 0 2px;
@@ -398,8 +425,7 @@
   }
   @media (orientation: landscape) {
     .controls-group-label {
-      flex-basis: auto;
-      width: 100%;
+      grid-column: 1 / -1;
       border-bottom: solid 1px;
     }
   }
@@ -407,6 +433,12 @@
     gap: 8px;
   }
   .fx-toggle {
+    /* inline-flex so the label stays centred once min-height makes the
+       button taller than its own text. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-target);
     padding: 5px 10px;
     border-radius: 4px;
     border: none;
