@@ -37,6 +37,12 @@ const QUALITY_WEDGE_DEFAULTS = {
 };
 const qualityWedgeLabels = {}; // direction -> label <text> element
 
+// Clear space between a split label's two lines, in SVG user units, with
+// the divider rule centred in it. Matches what the previous em-based
+// spacing happened to produce in desktop Chrome, but as a fixed gap every
+// engine reproduces — see renderJoyLabel.
+const SPLIT_LABEL_GAP = 1.5;
+
 // The quality shared by every currently-held degree, or null if none are held
 // or they disagree (a two-line default label is shown in that case).
 function soleHeldQuality() {
@@ -63,9 +69,12 @@ function renderJoyLabel(labelEl, text, resolved) {
   if (prevRule) prevRule.remove();
 
   const [top, bottom] = text.split('/');
-  const topSpan = svgEl('tspan', { x, dy: '-0.55em' });
+  // Provisional symmetric placement; the real positions come from the
+  // measurement below, and these are what's left if it can't run.
+  const provisionalTopY = y - SPLIT_LABEL_GAP / 2;
+  const topSpan = svgEl('tspan', { x, y: provisionalTopY });
   topSpan.textContent = top;
-  const bottomSpan = svgEl('tspan', { x, dy: '1.3em' });
+  const bottomSpan = svgEl('tspan', { x, y: y + SPLIT_LABEL_GAP / 2 });
   bottomSpan.textContent = bottom;
   if (resolved) {
     topSpan.classList.toggle('dimmed', top.toLowerCase() !== resolved.toLowerCase());
@@ -73,6 +82,29 @@ function renderJoyLabel(labelEl, text, resolved) {
   }
   labelEl.appendChild(topSpan);
   labelEl.appendChild(bottomSpan);
+
+  // Place the two lines by measuring the font rather than by trusting an
+  // em offset to land somewhere specific. A line's box isn't centred on its
+  // own anchor — it runs from ascent above to descent below — so anchors
+  // placed symmetrically about y still leave the *gap* between the lines
+  // off-centre, by half the difference between those two extents. That's
+  // what the divider rule sits in, and the rule is at a fixed y, so the two
+  // drift apart by however much the font disagrees with whatever the offset
+  // was tuned against. It was tuned against desktop Chrome's fallback font;
+  // iOS resolves -apple-system to SF Pro, with its own ascent/descent, and
+  // the rule stopped looking centred there.
+  //
+  // Both lines are the same font, size, weight and all-caps, so one
+  // measurement gives the extents for both: place each line's near edge
+  // exactly SPLIT_LABEL_GAP/2 from y and the rule lands dead centre between
+  // them on any engine, with the gap always the same size.
+  const box = topSpan.getBBox();
+  if (box.height) {
+    const above = provisionalTopY - box.y;
+    const below = box.height - above;
+    topSpan.setAttribute('y', y - SPLIT_LABEL_GAP / 2 - below);
+    bottomSpan.setAttribute('y', y + SPLIT_LABEL_GAP / 2 + above);
+  }
 
   const rule = svgEl('line', {
     class: `joy-label-rule${labelEl.classList.contains('active') ? ' active' : ''}`,
