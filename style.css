@@ -57,6 +57,15 @@
   }
   .synth {
     flex: 1;
+    /* A flex item's default min-height is auto (content-based), not 0 —
+       .joysticks' height: 100% creates a percentage chain down through
+       .joystick that resolves to an inflated intrinsic size while that
+       content-based minimum is being computed, which then becomes
+       .synth's floor and pushes it taller than the space body actually
+       has (884.78px measured on an 844px-tall viewport). min-height: 0
+       is the standard fix: let .synth actually shrink to its flex-basis
+       (the real available space) instead of being floored by content. */
+    min-height: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -65,22 +74,32 @@
     text-align: center;
     box-sizing: border-box;
   }
-  /* Portrait: joysticks stacked one above the other (each as large as half
-     the viewport height allows), with the controls sandwiched between them
-     as a single row. Grid rather than flex so everything lands in known
-     cells instead of relying on wrap order. */
+  /* Portrait: joysticks stacked one above the other, with the controls
+     sandwiched between them as a single row. grid-template-rows gives the
+     two joystick rows an equal *share of whatever's actually left* after
+     the controls row takes what it needs (1fr auto 1fr) — height: 100%
+     makes that a real, definite budget (inherited from .synth's own
+     flex-resolved height) rather than each joystick sizing itself off a
+     fixed dvh fraction independent of how tall .controls happens to be.
+     That fixed-fraction approach (45dvh per stick) is what let the bottom
+     joystick get clipped off-screen once .controls grew past whatever
+     height 45dvh*2 had left room for — body has overflow: hidden, so
+     there was no scrolling to reach it. */
   .joysticks {
     display: grid;
     grid-template-columns: repeat(3, auto);
+    grid-template-rows: 1fr auto 1fr;
     justify-content: center;
     align-items: center;
     gap: 4px;
     margin: 0;
     width: 100%;
+    height: 100%;
   }
   .joystick {
-    width: min(45dvh, 96vw);
-    height: auto;
+    width: auto;
+    height: 100%;
+    max-width: 96vw;
     aspect-ratio: 1;
     user-select: none;
     -webkit-user-select: none;
@@ -125,6 +144,12 @@
   @media (orientation: landscape) {
     .joysticks {
       grid-template-columns: 1fr auto 1fr;
+      /* Landscape puts everything in a single grid-row: 1 (columns do the
+         left/middle/right split) — override the portrait rule's
+         1fr auto 1fr rows, or an empty, unused row 3 would still claim
+         its 1fr share of .joysticks' height and leave row 1 (where
+         everything actually lives) with only half the space. */
+      grid-template-rows: 1fr;
       column-gap: 4px;
       row-gap: 4px;
     }
