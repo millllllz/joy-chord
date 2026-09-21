@@ -253,12 +253,11 @@
     cursor: pointer;
   }
   /* Both centers mirror the same live resolved chord name (see
-     updateChordNameLabel in degree-joystick.js). The degree side keeps it
-     case-sensitive ("Dsus2"), same as its own degree labels (I vs ii vs
-     vii°) — see Architecture in README. The modifier side still uppercases
-     it ("DSUS2"), per the standing, previously-reverted preference for
-     uppercase modifier-stick labels — not touched here even though it now
-     means the two centers render the same string differently. */
+     updateChordNameLabel in degree-joystick.js), case-sensitive on both
+     sticks ("Dsus2") — unlike the modifier stick's other (fixed-text)
+     labels, which stay uppercase, a chord name needs mixed case to read
+     correctly (by explicit user request, overriding the modifier stick's
+     general uppercase convention for this one dynamic label). */
   .joy-center-label,
   .degree-center-label {
     font-size: 12px;
@@ -268,9 +267,6 @@
     text-anchor: middle;
     dominant-baseline: middle;
     pointer-events: none;
-  }
-  .joy-center-label {
-    text-transform: uppercase;
   }
 
   /* The stick "dot": a knob that tracks the raw pointer/touch position
