@@ -27,11 +27,12 @@ import {
   setTremoloDepth,
 } from './effects.js';
 import { init as initSettings, settings, setHoldEnabled } from './settings.js';
-import { init as initDegreeJoystick, releaseAllHeld } from './degree-joystick.js';
+import { init as initDegreeJoystick, releaseAllHeld, syncArpToHeldChord } from './degree-joystick.js';
 import { init as initModifierJoystick, setJoyDirection } from './modifier-joystick.js';
 import { init as initDebug, debugLog } from './debug.js';
 import { chords } from './chords.js';
 import { init as initFullscreen } from './fullscreen.js';
+import { arpeggiator, setArpEnabled, setArpOrder, setArpRate } from './arpeggiator.js';
 
 // Initialize audio system
 initAudio();
@@ -259,6 +260,34 @@ wireFxDialog({
       onInput: setEnvelopeRelease,
     },
   ],
+});
+
+// Arp has an enabled toggle and a rate slider like the other fx dialogs, but
+// also an order <select> (not a slider) — wired directly rather than
+// stretching wireFxDialog's sliders-only shape for one extra control.
+wireFxDialog({
+  toggleBtn: document.getElementById('arp-toggle'),
+  dialog: document.getElementById('arp-dialog'),
+  enabledCheckbox: document.getElementById('arp-enabled-checkbox'),
+  isEnabled: () => arpeggiator.enabled,
+  setEnabled: (enabled) => {
+    setArpEnabled(enabled);
+    syncArpToHeldChord();
+  },
+  sliders: [
+    {
+      slider: document.getElementById('arp-rate-slider'),
+      valueEl: document.getElementById('arp-rate-value'),
+      format: (v) => `${v.toFixed(1)}Hz`,
+      onInput: setArpRate,
+    },
+  ],
+});
+
+const arpOrderSelect = document.getElementById('arp-order-select');
+arpOrderSelect.value = arpeggiator.order;
+arpOrderSelect.addEventListener('change', () => {
+  setArpOrder(arpOrderSelect.value);
 });
 
 // Initialize UI

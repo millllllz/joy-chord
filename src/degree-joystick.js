@@ -3,6 +3,7 @@ import { effects } from './effects.js';
 import { chords, getChordIntervals, resolvedChordName } from './chords.js';
 import { settings } from './settings.js';
 import { updateQualityWedgeLabels } from './modifier-joystick.js';
+import { arpeggiator, updateArpChord } from './arpeggiator.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -278,13 +279,26 @@ function updateChordNameLabel() {
   });
 }
 
+// Routes a chord-change to either the plain voice reconciler or the
+// arpeggiator, depending on whether the arp is switched on. The arp owns
+// voice playback entirely while enabled (stepping through `target`'s notes
+// on its own timer) rather than layering on top of reconcileVoices' held-
+// chord playback, so the two are mutually exclusive per call, not combined.
+function applyVoicing(oldTarget, target) {
+  if (arpeggiator.enabled) {
+    updateArpChord(target);
+  } else {
+    reconcileVoices(oldTarget, target);
+  }
+}
+
 function updateDegreeVoicing(d, direction) {
   const oldTarget = new Map();
   (degreeJoystick.heldVoices.get(d.key) || new Set()).forEach(id => {
     oldTarget.set(id, noteFreqFromId(id));
   });
   const target = voicesForDegree(d, direction);
-  reconcileVoices(oldTarget, target);
+  applyVoicing(oldTarget, target);
   degreeJoystick.heldVoices.set(d.key, new Set(target.keys()));
 }
 
@@ -316,7 +330,7 @@ function pressDegree(d) {
 
   degreeJoystick.heldDegrees.set(d.key, degreeJoystick.currentDirection);
   const target = voicesForDegree(d, degreeJoystick.currentDirection);
-  reconcileVoices(oldTarget, target);
+  applyVoicing(oldTarget, target);
   degreeJoystick.heldVoices.set(d.key, new Set(target.keys()));
 
   d.wedgeEl.classList.add('active');
@@ -328,10 +342,17 @@ function pressDegree(d) {
 
 function releaseDegree(d) {
   if (!degreeJoystick.heldDegrees.has(d.key)) return;
-  // A genuine note-off (finger/key lifted with nothing taking over) always
-  // hard-stops — there's no successor chord for reconcileVoices to glide
-  // these voices into.
-  (degreeJoystick.heldVoices.get(d.key) || new Set()).forEach(id => stopVoice(id));
+  if (arpeggiator.enabled) {
+    // Same "nothing to hand off to" reasoning as the hard-stop below, but
+    // routed through the arp so it also cancels its timer and cuts whatever
+    // step is currently sounding, instead of leaving it stuck mid-sequence.
+    updateArpChord(new Map());
+  } else {
+    // A genuine note-off (finger/key lifted with nothing taking over) always
+    // hard-stops — there's no successor chord for reconcileVoices to glide
+    // these voices into.
+    (degreeJoystick.heldVoices.get(d.key) || new Set()).forEach(id => stopVoice(id));
+  }
   clearDegreeState(d);
   updateQualityWedgeLabels();
   updateChordNameLabel();
@@ -345,6 +366,26 @@ export function releaseAllHeld() {
   [...degreeJoystick.heldDegrees.keys()].forEach(key => {
     releaseDegree(degreeJoystick.degreeByKey.get(key));
   });
+}
+
+// Called by index.js right after flipping the arp's own enabled flag, so a
+// chord already held at the moment of the toggle switches modes cleanly
+// instead of waiting for the next press/release to notice. Both directions
+// need every one of the chord's voices hard-stopped first rather than
+// reconciled: switching on, the plain sustained voices reconcileVoices
+// started are all still playing and would otherwise keep ringing underneath
+// the arp's own stepped voice; switching off, only one of the chord's ids
+// is actually a live voice (the arp's current step) even though heldVoices
+// lists all of them, so reconcileVoices would wrongly treat the silent ones
+// as "already correct" and never start them.
+export function syncArpToHeldChord() {
+  const [heldKey] = degreeJoystick.heldDegrees.keys();
+  if (!heldKey) return;
+  const d = degreeJoystick.degreeByKey.get(heldKey);
+  (degreeJoystick.heldVoices.get(heldKey) || new Set()).forEach(id => stopVoice(id));
+  const target = voicesForDegree(d, degreeJoystick.heldDegrees.get(heldKey));
+  applyVoicing(new Map(), target);
+  degreeJoystick.heldVoices.set(heldKey, new Set(target.keys()));
 }
 
 export function setDirection(direction) {
