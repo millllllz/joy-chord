@@ -98,3 +98,31 @@ export function qualityLabel(direction, quality) {
   const labels = chords.QUALITY_LABELS[direction];
   return quality === 'major' ? labels.major : labels.other;
 }
+
+// Chord-symbol suffix for every (quality, direction) pair getChordIntervals
+// can produce. Kept as an explicit table rather than derived from the
+// interval numbers themselves, since a few combinations (minor + augmented,
+// diminished + add9, ...) land on non-standard chords with no single
+// obvious canonical symbol to compute toward.
+const CHORD_SUFFIXES = {
+  major: {
+    center: '', up: 'm', 'up-right': '7', right: 'maj7', 'down-right': 'add9',
+    down: 'sus4', 'down-left': '6', left: 'dim', 'up-left': 'aug',
+  },
+  minor: {
+    center: 'm', up: '', 'up-right': 'm7', right: 'm7', 'down-right': 'madd9',
+    down: 'sus4', 'down-left': 'sus2', left: 'dim', 'up-left': 'm#5',
+  },
+  diminished: {
+    center: 'dim', up: '', 'up-right': 'm7b5', right: 'm7b5', 'down-right': 'dim9',
+    down: 'sus4b5', 'down-left': 'sus2b5', left: 'm', 'up-left': 'm',
+  },
+};
+
+// The chord name a degree actually sounds right now: its root note name
+// (transposed by the current key) plus the symbol for whatever the held
+// direction does to its triad.
+export function resolvedChordName(keyRoot, degree, direction) {
+  const rootName = chords.KEY_NAMES[(keyRoot + degree.semitone) % 12];
+  return `${rootName}${CHORD_SUFFIXES[degree.quality][direction]}`;
+}

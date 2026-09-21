@@ -1,6 +1,6 @@
 import { stopVoice, noteFreq, reconcileVoices } from './audio.js';
 import { effects } from './effects.js';
-import { chords, getChordIntervals } from './chords.js';
+import { chords, getChordIntervals, resolvedChordName } from './chords.js';
 import { settings } from './settings.js';
 import { updateQualityWedgeLabels } from './modifier-joystick.js';
 
@@ -258,6 +258,26 @@ function noteFreqFromId(id) {
   return noteFreq(Number(id.split(':')[1]));
 }
 
+// Mirrors the resolved chord name into both joysticks' center circles — the
+// degree stick's own wedges only show a bare scale degree ("V"), and the
+// modifier stick's only show what a direction *does* to a triad ("Dom7"),
+// so neither one on its own says what's actually sounding. Monophonic by
+// degree (see pressDegree), so at most one entry is ever held.
+function updateChordNameLabel() {
+  const [heldKey] = degreeJoystick.heldDegrees.keys();
+  const name = heldKey
+    ? resolvedChordName(settings.currentKeyRoot, degreeJoystick.degreeByKey.get(heldKey), degreeJoystick.currentDirection)
+    : '';
+  // Most names (root + maj7/m7/dim/aug/sus4/...) fit the circle at the
+  // default 12px; a handful of rare quality+direction combos (e.g. a
+  // sharped root with sus2b5/sus4b5) run long enough to need shrinking.
+  const fontSize = name.length > 7 ? '9px' : name.length > 5 ? '10.5px' : '';
+  [document.getElementById('degree-center-label'), document.getElementById('joy-center')].forEach(el => {
+    el.textContent = name;
+    el.style.fontSize = fontSize;
+  });
+}
+
 function updateDegreeVoicing(d, direction) {
   const oldTarget = new Map();
   (degreeJoystick.heldVoices.get(d.key) || new Set()).forEach(id => {
@@ -303,6 +323,7 @@ function pressDegree(d) {
   d.labelEl.classList.add('active');
   d.qualityEl.classList.add('active');
   updateQualityWedgeLabels();
+  updateChordNameLabel();
 }
 
 function releaseDegree(d) {
@@ -313,6 +334,7 @@ function releaseDegree(d) {
   (degreeJoystick.heldVoices.get(d.key) || new Set()).forEach(id => stopVoice(id));
   clearDegreeState(d);
   updateQualityWedgeLabels();
+  updateChordNameLabel();
 }
 
 // Unconditionally releases whatever's currently held, bypassing Hold —
@@ -332,6 +354,7 @@ export function setDirection(direction) {
     updateDegreeVoicing(degreeJoystick.degreeByKey.get(key), direction);
     degreeJoystick.heldDegrees.set(key, direction);
   });
+  updateChordNameLabel();
 }
 
 export function setKeyRoot(root) {

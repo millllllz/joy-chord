@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chords, getChordIntervals, qualityLabel } from './chords.js';
+import { chords, getChordIntervals, qualityLabel, resolvedChordName } from './chords.js';
 
 describe('chords module', () => {
   describe('DEGREES', () => {
@@ -138,6 +138,42 @@ describe('chords module', () => {
 
     it('starts at C', () => {
       expect(chords.KEY_NAMES[0]).toBe('C');
+    });
+  });
+
+  describe('resolvedChordName', () => {
+    const I = chords.DEGREES[0];   // major, semitone 0
+    const ii = chords.DEGREES[1];  // minor, semitone 2
+    const vii = chords.DEGREES[6]; // diminished, semitone 11
+
+    it('names a bare major triad after its root alone', () => {
+      expect(resolvedChordName(0, I, 'center')).toBe('C');
+    });
+
+    it('names a bare minor triad with a lowercase m', () => {
+      expect(resolvedChordName(0, ii, 'center')).toBe('Dm');
+    });
+
+    it('names a bare diminished triad', () => {
+      expect(resolvedChordName(0, vii, 'center')).toBe('Bdim');
+    });
+
+    it('transposes the root by the current key', () => {
+      expect(resolvedChordName(2, I, 'center')).toBe('D');
+      expect(resolvedChordName(2, ii, 'center')).toBe('Em');
+    });
+
+    it('names dominant and major 7ths', () => {
+      expect(resolvedChordName(0, I, 'up-right')).toBe('C7');
+      expect(resolvedChordName(0, I, 'right')).toBe('Cmaj7');
+      expect(resolvedChordName(0, ii, 'right')).toBe('Dm7');
+    });
+
+    it('names sus, add, augmented and half-diminished chords', () => {
+      expect(resolvedChordName(0, I, 'down')).toBe('Csus4');
+      expect(resolvedChordName(0, I, 'down-right')).toBe('Cadd9');
+      expect(resolvedChordName(0, I, 'up-left')).toBe('Caug');
+      expect(resolvedChordName(0, vii, 'up-right')).toBe('Bm7b5');
     });
   });
 
