@@ -352,12 +352,3 @@ if ('serviceWorker' in navigator) {
 } else {
   debugLog('serviceWorker not supported');
 }
-
-// Show last commit short SHA as build marker
-fetch('https://api.github.com/repos/millllllz/joy-chord/commits/master')
-  .then(res => res.json())
-  .then(data => {
-    const sha = data.sha?.slice(0, 7);
-    if (sha) document.getElementById('build-version').textContent = sha;
-  })
-  .catch(() => {});
