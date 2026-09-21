@@ -32,7 +32,7 @@ import { init as initModifierJoystick, setJoyDirection } from './modifier-joysti
 import { init as initDebug, debugLog } from './debug.js';
 import { chords } from './chords.js';
 import { init as initFullscreen } from './fullscreen.js';
-import { arpeggiator, setArpEnabled, setArpOrder, setArpRate } from './arpeggiator.js';
+import { arpeggiator, ORDER_NAMES, setArpEnabled, setArpOrder, setArpRate } from './arpeggiator.js';
 
 // Initialize audio system
 initAudio();
@@ -284,7 +284,16 @@ wireFxDialog({
   ],
 });
 
+const ORDER_LABELS = {
+  up: 'Up', down: 'Down', 'up-down': 'Up/Down', 'down-up': 'Down/Up', random: 'Random',
+};
 const arpOrderSelect = document.getElementById('arp-order-select');
+ORDER_NAMES.forEach(name => {
+  const option = document.createElement('option');
+  option.value = name;
+  option.textContent = ORDER_LABELS[name];
+  arpOrderSelect.appendChild(option);
+});
 arpOrderSelect.value = arpeggiator.order;
 arpOrderSelect.addEventListener('change', () => {
   setArpOrder(arpOrderSelect.value);
@@ -321,3 +330,12 @@ if ('serviceWorker' in navigator) {
 } else {
   debugLog('serviceWorker not supported');
 }
+
+// Show last commit short SHA as build marker
+fetch('https://api.github.com/repos/millllllz/joy-chord/commits/master')
+  .then(res => res.json())
+  .then(data => {
+    const sha = data.sha?.slice(0, 7);
+    if (sha) document.getElementById('build-version').textContent = sha;
+  })
+  .catch(() => {});
