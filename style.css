@@ -293,6 +293,7 @@
      -only sessions never see labels for a control scheme they can't use)
      and only on viewports wide enough to have a real keyboard (>768px). */
   .bindkey {
+    display: none !important;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.15s ease;
@@ -373,6 +374,7 @@
     .controls-group-label {
       flex-basis: auto;
       width: 100%;
+      border-bottom: solid 1px;
     }
   }
   .sound-controls {
