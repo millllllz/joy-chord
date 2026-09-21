@@ -38,12 +38,57 @@ import { arpeggiator, ORDER_NAMES, setArpEnabled, setArpOrder, setArpRate } from
 initAudio();
 initEffects();
 
-// Wires an effect's toggle button (opens its <dialog>) plus the dialog's
-// enabled checkbox and parameter sliders. `commitOn: 'change'` is for
+// A plain tap/click flips the effect on/off directly; holding the button
+// down for LONG_PRESS_MS instead opens its <dialog> for editing parameters.
+// This lets the toolbar double as both an at-a-glance on/off panel and an
+// entry point to detail, without a second control per effect.
+const LONG_PRESS_MS = 450;
+
+// Wires an effect's toggle button (tap = on/off, long-press = opens its
+// <dialog>) plus the dialog's parameter sliders. `commitOn: 'change'` is for
 // sliders whose onInput is expensive (regenerating a buffer) — those only
 // fire once a drag settles instead of on every 'input' tick.
-function wireFxDialog({ toggleBtn, dialog, enabledCheckbox, isEnabled, setEnabled, sliders }) {
-  toggleBtn.addEventListener('click', () => dialog.showModal());
+function wireFxDialog({ toggleBtn, dialog, isEnabled, setEnabled, sliders }) {
+  // isEnabled/setEnabled are optional — the envelope dialog has no on/off
+  // concept (always active, not an optional effect), so it skips this whole
+  // block and toggleBtn only ever opens the dialog, with no press-duration
+  // distinction and no active/inactive state to sync.
+  if (isEnabled) {
+    const syncToggleBtn = () => {
+      toggleBtn.classList.toggle('active', isEnabled());
+      toggleBtn.setAttribute('aria-pressed', String(isEnabled()));
+    };
+
+    // Pointer (not click) so we can measure hold duration; a long-press
+    // opens the dialog and suppresses the toggle that would otherwise fire
+    // on release. pointercancel covers the drag-off-button/interruption
+    // case so a stray pointerdown can't leave the timer running.
+    let pressTimer = null;
+    let longPressed = false;
+    toggleBtn.addEventListener('pointerdown', () => {
+      longPressed = false;
+      pressTimer = setTimeout(() => {
+        longPressed = true;
+        dialog.showModal();
+      }, LONG_PRESS_MS);
+    });
+    const cancelPress = () => {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+    };
+    toggleBtn.addEventListener('pointerup', () => {
+      cancelPress();
+      if (longPressed) return;
+      setEnabled(!isEnabled());
+      syncToggleBtn();
+    });
+    toggleBtn.addEventListener('pointercancel', cancelPress);
+    toggleBtn.addEventListener('pointerleave', cancelPress);
+
+    syncToggleBtn();
+  } else {
+    toggleBtn.addEventListener('click', () => dialog.showModal());
+  }
 
   // Native <dialog> has no built-in click-outside-to-close; clicking the
   // backdrop still targets the dialog element itself (its content box
@@ -51,23 +96,6 @@ function wireFxDialog({ toggleBtn, dialog, enabledCheckbox, isEnabled, setEnable
   dialog.addEventListener('click', (e) => {
     if (e.target === dialog) dialog.close();
   });
-
-  // enabledCheckbox is optional — the envelope dialog has no on/off concept
-  // (always active, not an optional effect), so it skips this whole block
-  // and toggleBtn stays a plain "open the dialog" button with no
-  // active/inactive state to sync.
-  if (enabledCheckbox) {
-    const syncToggleBtn = () => {
-      toggleBtn.classList.toggle('active', isEnabled());
-      toggleBtn.setAttribute('aria-pressed', String(isEnabled()));
-    };
-    enabledCheckbox.checked = isEnabled();
-    enabledCheckbox.addEventListener('change', () => {
-      setEnabled(enabledCheckbox.checked);
-      syncToggleBtn();
-    });
-    syncToggleBtn();
-  }
 
   sliders.forEach(({ slider, valueEl, format, onInput, commitOn = 'input' }) => {
     valueEl.textContent = format(Number(slider.value));
@@ -82,7 +110,6 @@ function wireFxDialog({ toggleBtn, dialog, enabledCheckbox, isEnabled, setEnable
 wireFxDialog({
   toggleBtn: document.getElementById('delay-toggle'),
   dialog: document.getElementById('delay-dialog'),
-  enabledCheckbox: document.getElementById('delay-enabled-checkbox'),
   isEnabled: () => effects.delayEnabled,
   setEnabled: setDelayEnabled,
   sliders: [
@@ -118,7 +145,6 @@ const formatHz = (hz) => hz >= 1000 ? `${(hz / 1000).toFixed(1)}kHz` : `${Math.r
 wireFxDialog({
   toggleBtn: document.getElementById('filter-toggle'),
   dialog: document.getElementById('filter-dialog'),
-  enabledCheckbox: document.getElementById('filter-enabled-checkbox'),
   isEnabled: () => effects.filterEnabled,
   setEnabled: setFilterEnabled,
   sliders: [
@@ -140,7 +166,6 @@ wireFxDialog({
 wireFxDialog({
   toggleBtn: document.getElementById('tremolo-toggle'),
   dialog: document.getElementById('tremolo-dialog'),
-  enabledCheckbox: document.getElementById('tremolo-enabled-checkbox'),
   isEnabled: () => effects.tremoloEnabled,
   setEnabled: setTremoloEnabled,
   sliders: [
@@ -165,7 +190,6 @@ wireFxDialog({
 wireFxDialog({
   toggleBtn: document.getElementById('glide-toggle'),
   dialog: document.getElementById('glide-dialog'),
-  enabledCheckbox: document.getElementById('glide-enabled-checkbox'),
   isEnabled: () => audio.glideEnabled,
   setEnabled: setGlideEnabled,
   sliders: [
@@ -189,7 +213,6 @@ glideEdgesCheckbox.addEventListener('change', () => {
 wireFxDialog({
   toggleBtn: document.getElementById('reverb-toggle'),
   dialog: document.getElementById('reverb-dialog'),
-  enabledCheckbox: document.getElementById('reverb-enabled-checkbox'),
   isEnabled: () => effects.reverbEnabled,
   setEnabled: setReverbEnabled,
   sliders: [
@@ -268,7 +291,6 @@ wireFxDialog({
 wireFxDialog({
   toggleBtn: document.getElementById('arp-toggle'),
   dialog: document.getElementById('arp-dialog'),
-  enabledCheckbox: document.getElementById('arp-enabled-checkbox'),
   isEnabled: () => arpeggiator.enabled,
   setEnabled: (enabled) => {
     setArpEnabled(enabled);
