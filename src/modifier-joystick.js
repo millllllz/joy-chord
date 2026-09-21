@@ -65,7 +65,7 @@ function renderJoyLabel(labelEl, text, resolved) {
   const [top, bottom] = text.split('/');
   const topSpan = svgEl('tspan', { x, dy: '-0.55em' });
   topSpan.textContent = top;
-  const bottomSpan = svgEl('tspan', { x, dy: '1.9em' });
+  const bottomSpan = svgEl('tspan', { x, dy: '1.3em' });
   bottomSpan.textContent = bottom;
   if (resolved) {
     topSpan.classList.toggle('dimmed', top.toLowerCase() !== resolved.toLowerCase());
