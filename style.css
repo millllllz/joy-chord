@@ -430,6 +430,7 @@
   }
   .sound-controls {
     gap: 8px;
+    margin-top: 1em;
   }
   .fx-toggle {
     /* inline-flex so the label stays centred once min-height makes the
