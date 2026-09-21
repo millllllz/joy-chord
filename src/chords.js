@@ -72,8 +72,12 @@ export function getChordIntervals(quality, direction) {
     case 'center':       return [root, third, fifth];
     case 'up':            // maj/min toggle
       return quality === 'major' ? chords.BASE_TRIAD.minor : chords.BASE_TRIAD.major;
-    case 'up-right':      // dominant 7th (flattened 7th)
-      return [root, third, fifth, 10];
+    case 'up-right':      // dominant 7th: major 3rd + perfect 5th + flat 7,
+                           // always — that's literally what "dominant"
+                           // means, independent of the held triad's own
+                           // quality (a minor or diminished degree's third
+                           // and fifth get overridden, not layered on)
+      return [root, 4, 7, 10];
     case 'right':         // natural 7th (major or minor, matching quality)
       return [root, third, fifth, quality === 'major' ? 11 : 10];
     case 'down-right':    // add9
@@ -84,8 +88,11 @@ export function getChordIntervals(quality, direction) {
       return quality === 'major' ? [root, third, fifth, 9] : [root, 2, fifth];
     case 'left':          // darken: major/minor -> diminished; diminished -> minor
       return quality === 'diminished' ? chords.BASE_TRIAD.minor : chords.BASE_TRIAD.diminished;
-    case 'up-left':       // augmented: raise the 5th
-      return [root, third, fifth + 1];
+    case 'up-left':       // augmented: major 3rd + raised 5th, always — same
+                           // reasoning as dominant 7th above, an augmented
+                           // triad is a fixed shape, not the held triad's
+                           // own 3rd with its 5th nudged up
+      return [root, 4, 8];
     default:
       return [root, third, fifth];
   }
@@ -101,21 +108,25 @@ export function qualityLabel(direction, quality) {
 
 // Chord-symbol suffix for every (quality, direction) pair getChordIntervals
 // can produce. Kept as an explicit table rather than derived from the
-// interval numbers themselves, since a few combinations (minor + augmented,
+// interval numbers themselves, since a few combinations (minor + add9,
 // diminished + add9, ...) land on non-standard chords with no single
-// obvious canonical symbol to compute toward.
+// obvious canonical symbol to compute toward. up-right (dominant 7th) and
+// up-left (augmented) are '7'/'aug' in every row, not just major's — both
+// force a major 3rd regardless of the held triad's own quality (see
+// getChordIntervals), so e.g. a minor degree's Dom7 is a true dominant 7th
+// ("D7"), not a minor 7th ("Dm7").
 const CHORD_SUFFIXES = {
   major: {
     center: '', up: 'm', 'up-right': '7', right: 'maj7', 'down-right': 'add9',
     down: 'sus4', 'down-left': '6', left: 'dim', 'up-left': 'aug',
   },
   minor: {
-    center: 'm', up: '', 'up-right': 'm7', right: 'm7', 'down-right': 'madd9',
-    down: 'sus4', 'down-left': 'sus2', left: 'dim', 'up-left': 'm#5',
+    center: 'm', up: '', 'up-right': '7', right: 'm7', 'down-right': 'madd9',
+    down: 'sus4', 'down-left': 'sus2', left: 'dim', 'up-left': 'aug',
   },
   diminished: {
-    center: 'dim', up: '', 'up-right': 'm7b5', right: 'm7b5', 'down-right': 'dim9',
-    down: 'sus4b5', 'down-left': 'sus2b5', left: 'm', 'up-left': 'm',
+    center: 'dim', up: '', 'up-right': '7', right: 'm7b5', 'down-right': 'dim9',
+    down: 'sus4b5', 'down-left': 'sus2b5', left: 'm', 'up-left': 'aug',
   },
 };
 

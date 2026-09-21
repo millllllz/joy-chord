@@ -59,9 +59,10 @@ describe('chords module', () => {
       expect(getChordIntervals('minor', 'up')).toEqual([0, 4, 7]);
     });
 
-    it('adds dominant 7th on up-right', () => {
+    it('adds dominant 7th on up-right, forcing a major 3rd regardless of quality', () => {
       expect(getChordIntervals('major', 'up-right')).toEqual([0, 4, 7, 10]);
-      expect(getChordIntervals('minor', 'up-right')).toEqual([0, 3, 7, 10]);
+      expect(getChordIntervals('minor', 'up-right')).toEqual([0, 4, 7, 10]);
+      expect(getChordIntervals('diminished', 'up-right')).toEqual([0, 4, 7, 10]);
     });
 
     it('adds major or minor 7th on right', () => {
@@ -90,9 +91,10 @@ describe('chords module', () => {
       expect(getChordIntervals('diminished', 'left')).toEqual([0, 3, 7]);
     });
 
-    it('augments on up-left', () => {
+    it('augments on up-left, forcing a major 3rd regardless of quality', () => {
       expect(getChordIntervals('major', 'up-left')).toEqual([0, 4, 8]);
-      expect(getChordIntervals('minor', 'up-left')).toEqual([0, 3, 8]);
+      expect(getChordIntervals('minor', 'up-left')).toEqual([0, 4, 8]);
+      expect(getChordIntervals('diminished', 'up-left')).toEqual([0, 4, 8]);
     });
   });
 
@@ -169,11 +171,18 @@ describe('chords module', () => {
       expect(resolvedChordName(0, ii, 'right')).toBe('Dm7');
     });
 
-    it('names sus, add, augmented and half-diminished chords', () => {
+    it('names sus, add, and half-diminished chords', () => {
       expect(resolvedChordName(0, I, 'down')).toBe('Csus4');
       expect(resolvedChordName(0, I, 'down-right')).toBe('Cadd9');
+      expect(resolvedChordName(0, vii, 'right')).toBe('Bm7b5');
+    });
+
+    it('names dominant 7th and augmented with a forced major 3rd, regardless of the held degree\'s own quality', () => {
       expect(resolvedChordName(0, I, 'up-left')).toBe('Caug');
-      expect(resolvedChordName(0, vii, 'up-right')).toBe('Bm7b5');
+      expect(resolvedChordName(0, ii, 'up-right')).toBe('D7');
+      expect(resolvedChordName(0, ii, 'up-left')).toBe('Daug');
+      expect(resolvedChordName(0, vii, 'up-right')).toBe('B7');
+      expect(resolvedChordName(0, vii, 'up-left')).toBe('Baug');
     });
   });
 
