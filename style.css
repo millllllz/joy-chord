@@ -17,6 +17,11 @@
     --stick-dot-shadow: rgba(0, 0, 0, 0.45);
     --debug-bg: rgba(0, 0, 0, 0.9);
     --debug-text: #6ee7c9;
+    /* Chevron for .key-select's custom dropdown arrow, colored to match
+       --muted above — baked in per theme rather than referencing the
+       variable, since a background-image data URI can't see currentColor
+       or var(). %23 is a URL-escaped '#', required inside a data URI. */
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238a8f98' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
 
   @media (prefers-color-scheme: light) {
@@ -38,6 +43,7 @@
       --stick-dot-shadow: rgba(0, 0, 0, 0.15);
       --debug-bg: rgba(255, 255, 255, 0.95);
       --debug-text: #059669;
+      --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23666666' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     }
   }
   * { box-sizing: border-box; }
@@ -383,15 +389,34 @@
     border-radius: 6px;
     border: none;
     background: var(--panel);
-    color: var(--text);
+    /* Matches .fx-toggle's inactive text color, not --text — these buttons
+       and selects sit in the same row and should read as one set of
+       equal-weight controls, not one text-colored and the rest muted. */
+    color: var(--muted);
     font-size: 12px;
     font-weight: 700;
     font-family: inherit;
     cursor: pointer;
     width: 72px;
+    /* Custom dropdown arrow, so it's the select's own muted text color
+       instead of the browser's fixed UI-chrome gray (which read oddly once
+       the text itself stopped being --text). appearance: none drops the
+       native arrow entirely, so one has to be supplied — a background-image
+       SVG can't take currentColor, so --select-arrow is a full data-URI
+       defined per theme below (same pattern this file already uses for
+       every other theme-dependent value) — background-image alone, so it
+       layers over the background-color the `background` shorthand above
+       already set, rather than replacing it. */
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: var(--select-arrow);
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 10px 6px;
+    padding-right: 22px;
   }
   .key-select:hover {
-    background: var(--panel-hover);
+    background-color: var(--panel-hover);
   }
 
   /* FX and Sound are plain sub-groups inside the single .controls
