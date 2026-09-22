@@ -226,11 +226,16 @@ function clientToStickPoint(svg, clientX, clientY) {
 
 function moveStickDot(dotEl, svg, clientX, clientY) {
   const { x, y } = clientToStickPoint(svg, clientX, clientY);
+  // Tracking is unanimated: see .stick-dot.returning in style.css.
+  dotEl.classList.remove('returning');
   dotEl.setAttribute('cx', x);
   dotEl.setAttribute('cy', y);
 }
 
 function resetStickDot(dotEl) {
+  // Nothing is driving the dot any more, so this one move eases rather
+  // than snapping.
+  dotEl.classList.add('returning');
   dotEl.setAttribute('cx', STICK_CENTER);
   dotEl.setAttribute('cy', STICK_CENTER);
 }

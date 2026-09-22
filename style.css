@@ -305,6 +305,15 @@
     pointer-events: none;
     opacity: 0.6;
     filter: drop-shadow(0 2px 3px var(--stick-dot-shadow));
+  }
+  /* Only while springing back to centre on release — never while tracking.
+     Easing cx/cy during a drag meant every touchmove restarted an 80ms
+     interpolation from wherever the dot had got to, so it never actually
+     arrived: it trailed the finger by ~10px and its speed kept changing,
+     which is what read as jumpy. Direct manipulation wants the dot pinned
+     to the finger; the easing is only worth having for the one moment
+     nothing is driving it. resetStickDot/moveStickDot own this class. */
+  .stick-dot.returning {
     transition: cx 0.08s ease-out, cy 0.08s ease-out;
   }
 
