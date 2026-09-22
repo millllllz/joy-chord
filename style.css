@@ -132,6 +132,16 @@
        controls and the two sticks are competing for the same scarce
        vertical space and 44px would push the panel back off-screen. */
     --touch-target: 44px;
+    /* Nothing in here is text anyone wants to select, and the FX buttons
+       specifically can't afford to be: opening a dialog *is* a long-press
+       (see LONG_PRESS_MS in index.js), which is the same gesture iOS uses
+       to start a selection — so holding one would raise the callout bubble
+       and magnifier over the dialog it just opened. -webkit-touch-callout
+       is the one that suppresses that bubble; user-select alone doesn't.
+       Both inherit, so this covers the buttons, labels and selects inside. */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     /* Sized by its own content and centred, never stretched to the full
        width the sticks take. */
     flex: 0 0 auto;
@@ -468,6 +478,12 @@
     background: var(--panel);
     color: var(--text);
     font-family: inherit;
+    /* Same reasoning as .controls above — headings and parameter labels are
+       captions, not content, and a dialog opened by long-press shouldn't
+       hand you a text selection the moment your finger lands in it. */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
   .fx-dialog::backdrop {
     background: rgba(0, 0, 0, 0.5);
