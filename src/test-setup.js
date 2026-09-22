@@ -114,6 +114,10 @@ global.document = {
     },
     setAttribute: vi.fn(),
     getAttribute: vi.fn(),
+    // The centre chord-name labels get both of these written to them by
+    // updateChordNameLabel, which any setKeyRoot/setDirection call reaches.
+    textContent: '',
+    style: {},
   })),
   querySelectorAll: vi.fn(() => []),
   querySelector: vi.fn(() => null),

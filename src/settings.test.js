@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { settings, setKeyRoot, setHoldEnabled } from './settings.js';
+import { settings, setHoldEnabled } from './settings.js';
+// setKeyRoot lives in degree-joystick.js, which owns re-voicing whatever is
+// currently held; settings.js only holds the value it writes to.
+import { setKeyRoot } from './degree-joystick.js';
 
 describe('settings module', () => {
   beforeEach(() => {

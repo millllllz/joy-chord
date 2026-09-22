@@ -404,4 +404,8 @@ export function setKeyRoot(root) {
   degreeJoystick.heldDegrees.forEach((_, key) => {
     updateDegreeVoicing(degreeJoystick.degreeByKey.get(key), degreeJoystick.currentDirection);
   });
+  // Same as setDirection above: the held chord just changed pitch, so the
+  // centre readout naming it has to be rebuilt too, or it keeps showing the
+  // old key's chord while the new one sounds.
+  updateChordNameLabel();
 }

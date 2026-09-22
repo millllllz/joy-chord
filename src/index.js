@@ -27,7 +27,9 @@ import {
   setTremoloDepth,
 } from './effects.js';
 import { init as initSettings, settings, setHoldEnabled } from './settings.js';
-import { init as initDegreeJoystick, releaseAllHeld, syncArpToHeldChord } from './degree-joystick.js';
+import { setWaveType } from './audio.js';
+import { loadSettings, scheduleSave, flushSave } from './persistence.js';
+import { init as initDegreeJoystick, releaseAllHeld, syncArpToHeldChord, setKeyRoot } from './degree-joystick.js';
 import { init as initModifierJoystick, setJoyDirection } from './modifier-joystick.js';
 import { init as initDebug, debugLog } from './debug.js';
 import { chords } from './chords.js';
@@ -37,6 +39,13 @@ import { arpeggiator, ORDER_NAMES, setArpEnabled, setArpOrder, setArpRate } from
 // Initialize audio system
 initAudio();
 initEffects();
+
+// Restore saved settings before anything reads state to build the UI: every
+// control below initialises itself from the live state rather than from the
+// markup's own default, so this is what makes them come up showing what was
+// saved. It has to run after initEffects(), since the setters it drives push
+// values straight into audio nodes that only exist once that has run.
+loadSettings();
 
 // A plain tap/click flips the effect on/off directly; holding the button
 // down for LONG_PRESS_MS instead opens its <dialog> for editing parameters.
@@ -81,6 +90,7 @@ function wireFxDialog({ toggleBtn, dialog, isEnabled, setEnabled, sliders }) {
       if (longPressed) return;
       setEnabled(!isEnabled());
       syncToggleBtn();
+      scheduleSave();
     });
     toggleBtn.addEventListener('pointercancel', cancelPress);
     toggleBtn.addEventListener('pointerleave', cancelPress);
@@ -97,12 +107,18 @@ function wireFxDialog({ toggleBtn, dialog, isEnabled, setEnabled, sliders }) {
     if (e.target === dialog) dialog.close();
   });
 
-  sliders.forEach(({ slider, valueEl, format, onInput, commitOn = 'input' }) => {
+  // `value` reads the slider's position back out of live state, so state is
+  // the single source of truth and the markup's `value` attribute is only a
+  // fallback for a setting that was never saved. Without it a restored
+  // setting would be audible but show the markup default on its slider.
+  sliders.forEach(({ slider, valueEl, format, value, onInput, commitOn = 'input' }) => {
+    slider.value = value();
     valueEl.textContent = format(Number(slider.value));
     slider.addEventListener(commitOn, () => {
-      const value = Number(slider.value);
-      onInput(value);
-      valueEl.textContent = format(value);
+      const next = Number(slider.value);
+      onInput(next);
+      valueEl.textContent = format(next);
+      scheduleSave();
     });
   });
 }
@@ -116,18 +132,21 @@ wireFxDialog({
     {
       slider: document.getElementById('delay-time-slider'),
       valueEl: document.getElementById('delay-time-value'),
+      value: () => effects.DELAY_TIME,
       format: (v) => `${Math.round(v * 1000)}ms`,
       onInput: setDelayTime,
     },
     {
       slider: document.getElementById('delay-feedback-slider'),
       valueEl: document.getElementById('delay-feedback-value'),
+      value: () => effects.DELAY_FEEDBACK,
       format: (v) => `${Math.round(v * 100)}%`,
       onInput: setDelayFeedback,
     },
     {
       slider: document.getElementById('delay-send-slider'),
       valueEl: document.getElementById('delay-send-value'),
+      value: () => effects.DELAY_SEND_LEVEL,
       format: (v) => `${Math.round(v * 100)}%`,
       onInput: setDelaySendLevel,
     },
@@ -140,6 +159,10 @@ wireFxDialog({
 const FILTER_CUTOFF_MIN = 150;
 const FILTER_CUTOFF_MAX = 12000;
 const sliderToCutoff = (t) => FILTER_CUTOFF_MIN * Math.pow(FILTER_CUTOFF_MAX / FILTER_CUTOFF_MIN, t);
+// Inverse of the above: the stored setting is a frequency, but the slider's
+// own position is the 0-1 travel, so restoring one needs the mapping run
+// backwards.
+const cutoffToSlider = (hz) => Math.log(hz / FILTER_CUTOFF_MIN) / Math.log(FILTER_CUTOFF_MAX / FILTER_CUTOFF_MIN);
 const formatHz = (hz) => hz >= 1000 ? `${(hz / 1000).toFixed(1)}kHz` : `${Math.round(hz)}Hz`;
 
 wireFxDialog({
@@ -151,12 +174,14 @@ wireFxDialog({
     {
       slider: document.getElementById('filter-cutoff-slider'),
       valueEl: document.getElementById('filter-cutoff-value'),
+      value: () => cutoffToSlider(effects.FILTER_CUTOFF),
       format: (t) => formatHz(sliderToCutoff(t)),
       onInput: (t) => setFilterCutoff(sliderToCutoff(t)),
     },
     {
       slider: document.getElementById('filter-resonance-slider'),
       valueEl: document.getElementById('filter-resonance-value'),
+      value: () => effects.FILTER_RESONANCE,
       format: (v) => v.toFixed(1),
       onInput: setFilterResonance,
     },
@@ -172,12 +197,14 @@ wireFxDialog({
     {
       slider: document.getElementById('tremolo-rate-slider'),
       valueEl: document.getElementById('tremolo-rate-value'),
+      value: () => effects.TREMOLO_RATE,
       format: (v) => `${v.toFixed(1)}Hz`,
       onInput: setTremoloRate,
     },
     {
       slider: document.getElementById('tremolo-depth-slider'),
       valueEl: document.getElementById('tremolo-depth-value'),
+      value: () => effects.TREMOLO_DEPTH,
       format: (v) => `${Math.round(v * 100)}%`,
       onInput: setTremoloDepth,
     },
@@ -196,6 +223,7 @@ wireFxDialog({
     {
       slider: document.getElementById('glide-time-slider'),
       valueEl: document.getElementById('glide-time-value'),
+      value: () => audio.GLIDE_TIME,
       format: (v) => `${Math.round(v * 1000)}ms`,
       onInput: setGlideTime,
     },
@@ -208,6 +236,7 @@ const glideEdgesCheckbox = document.getElementById('glide-edges-checkbox');
 glideEdgesCheckbox.checked = audio.glideEdgesEnabled;
 glideEdgesCheckbox.addEventListener('change', () => {
   setGlideEdgesEnabled(glideEdgesCheckbox.checked);
+  scheduleSave();
 });
 
 wireFxDialog({
@@ -219,6 +248,7 @@ wireFxDialog({
     {
       slider: document.getElementById('reverb-decay-slider'),
       valueEl: document.getElementById('reverb-decay-value'),
+      value: () => effects.REVERB_DECAY,
       format: (v) => `${v.toFixed(1)}s`,
       onInput: setReverbDecay,
       commitOn: 'change',
@@ -226,6 +256,7 @@ wireFxDialog({
     {
       slider: document.getElementById('reverb-send-slider'),
       valueEl: document.getElementById('reverb-send-value'),
+      value: () => effects.REVERB_SEND_LEVEL,
       format: (v) => `${Math.round(v * 100)}%`,
       onInput: setReverbSendLevel,
     },
@@ -240,16 +271,24 @@ wireFxDialog({
 // reset keyboard play has, since it has no "drag to center" gesture of
 // its own.
 const holdToggleBtn = document.getElementById('hold-toggle');
+const syncHoldBtn = () => {
+  holdToggleBtn.classList.toggle('active', settings.holdEnabled);
+  holdToggleBtn.setAttribute('aria-pressed', String(settings.holdEnabled));
+};
 holdToggleBtn.addEventListener('click', () => {
   const enabled = !settings.holdEnabled;
   setHoldEnabled(enabled);
-  holdToggleBtn.classList.toggle('active', enabled);
-  holdToggleBtn.setAttribute('aria-pressed', String(enabled));
+  syncHoldBtn();
   if (!enabled) {
     releaseAllHeld();
     setJoyDirection('center');
   }
+  scheduleSave();
 });
+// Unlike the dialog-backed toggles (which wireFxDialog syncs for us), this
+// one had no initial sync at all — harmless while it always started off, but
+// a restored Hold would have been active with the button still looking idle.
+syncHoldBtn();
 
 // Basic ADSR — always active, so no enabledCheckbox (see wireFxDialog).
 // Shapes every voice's gain from the moment it starts, not just an
@@ -261,24 +300,28 @@ wireFxDialog({
     {
       slider: document.getElementById('envelope-attack-slider'),
       valueEl: document.getElementById('envelope-attack-value'),
+      value: () => audio.ENVELOPE_ATTACK,
       format: (v) => `${Math.round(v * 1000)}ms`,
       onInput: setEnvelopeAttack,
     },
     {
       slider: document.getElementById('envelope-decay-slider'),
       valueEl: document.getElementById('envelope-decay-value'),
+      value: () => audio.ENVELOPE_DECAY,
       format: (v) => `${Math.round(v * 1000)}ms`,
       onInput: setEnvelopeDecay,
     },
     {
       slider: document.getElementById('envelope-sustain-slider'),
       valueEl: document.getElementById('envelope-sustain-value'),
+      value: () => audio.ENVELOPE_SUSTAIN,
       format: (v) => `${Math.round(v * 100)}%`,
       onInput: setEnvelopeSustain,
     },
     {
       slider: document.getElementById('envelope-release-slider'),
       valueEl: document.getElementById('envelope-release-value'),
+      value: () => audio.ENVELOPE_RELEASE,
       format: (v) => `${Math.round(v * 1000)}ms`,
       onInput: setEnvelopeRelease,
     },
@@ -300,6 +343,7 @@ wireFxDialog({
     {
       slider: document.getElementById('arp-rate-slider'),
       valueEl: document.getElementById('arp-rate-value'),
+      value: () => arpeggiator.RATE_HZ,
       format: (v) => `${v.toFixed(1)}Hz`,
       onInput: setArpRate,
     },
@@ -319,6 +363,7 @@ ORDER_NAMES.forEach(name => {
 arpOrderSelect.value = arpeggiator.order;
 arpOrderSelect.addEventListener('change', () => {
   setArpOrder(arpOrderSelect.value);
+  scheduleSave();
 });
 
 // Initialize UI
@@ -326,6 +371,33 @@ initDebug();
 initSettings();
 initDegreeJoystick();
 initModifierJoystick();
+
+// The key and wave dropdowns: settings.js populates their options and sets
+// the current value, index.js wires what they do — same split as every other
+// control here. Key specifically has to be wired from this side, because the
+// setKeyRoot that re-voices a held chord lives in degree-joystick.js and
+// settings.js can't import it without closing a cycle. It used to call a
+// local stub that only assigned the field, so changing key while holding a
+// chord left that chord sounding in the old key until it was re-pressed.
+const keySelectEl = document.getElementById('key-select');
+keySelectEl.addEventListener('change', () => {
+  setKeyRoot(Number(keySelectEl.value));
+  scheduleSave();
+});
+
+const waveSelectEl = document.getElementById('wave-select');
+waveSelectEl.addEventListener('change', () => {
+  setWaveType(waveSelectEl.value);
+  scheduleSave();
+});
+
+// Settings writes are debounced, so a pending one needs forcing out before
+// the page can go away. iOS Safari often never fires 'beforeunload' when an
+// app is swiped away or backgrounded; these two do fire there.
+window.addEventListener('pagehide', flushSave);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushSave();
+});
 
 // Bind-key hint labels on the wedges start hidden — only a device actually
 // driven by a keyboard should see them. The first keydown matching one of

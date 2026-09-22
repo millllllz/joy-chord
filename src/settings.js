@@ -1,5 +1,5 @@
 import { chords } from './chords.js';
-import { audio, setWaveType } from './audio.js';
+import { audio } from './audio.js';
 
 export const settings = {
   currentKeyRoot: 0,
@@ -30,10 +30,14 @@ export function init() {
     option.textContent = name;
     keySelectEl.appendChild(option);
   });
+  // Value only — the change handler is wired in index.js, alongside every
+  // other control. It has to be: the real setKeyRoot lives in
+  // degree-joystick.js (it re-voices whatever is currently held), and
+  // importing that from here would close an import cycle, since
+  // degree-joystick.js already reads this module. Reading the value from
+  // state rather than hard-coding a default is also what lets a restored
+  // key show up in the dropdown (see persistence.js).
   keySelectEl.value = settings.currentKeyRoot;
-  keySelectEl.addEventListener('change', () => {
-    setKeyRoot(Number(keySelectEl.value));
-  });
 
   const waveSelectEl = document.getElementById('wave-select');
   settings.WAVE_TYPES.forEach(type => {
@@ -42,16 +46,9 @@ export function init() {
     option.textContent = type[0].toUpperCase() + type.slice(1);
     waveSelectEl.appendChild(option);
   });
+  // Same split as the key dropdown above: contents here, behaviour in
+  // index.js.
   waveSelectEl.value = audio.currentWaveType;
-  waveSelectEl.addEventListener('change', () => {
-    setWaveType(waveSelectEl.value);
-  });
-}
-
-export function setKeyRoot(root) {
-  if (root === settings.currentKeyRoot) return;
-  settings.currentKeyRoot = root;
-  // Re-voicing handled by caller
 }
 
 export function setHoldEnabled(enabled) {
