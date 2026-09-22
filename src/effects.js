@@ -6,7 +6,10 @@ export const effects = {
   reverbSend: null,
   reverbEnabled: true,
   filterNode: null,
-  filterEnabled: true,
+  // Off by default now — with delay/reverb pushed heavier below, a lowpass
+  // on top by default made the whole mix read muddy/dark; leaving it off
+  // lets someone reach for it deliberately instead of fighting it first.
+  filterEnabled: false,
   tremoloGain: null,
   tremoloLFO: null,
   tremoloDepthGain: null,
@@ -15,10 +18,10 @@ export const effects = {
   delayFeedbackGain: null,
   convolver: null,
   DELAY_TIME: 0.28,
-  DELAY_FEEDBACK: 0.32,
-  DELAY_SEND_LEVEL: 0.22,
-  REVERB_DECAY: 2.2,
-  REVERB_SEND_LEVEL: 0.18,
+  DELAY_FEEDBACK: 0.5,
+  DELAY_SEND_LEVEL: 0.38,
+  REVERB_DECAY: 3.5,
+  REVERB_SEND_LEVEL: 0.35,
   FILTER_CUTOFF: 2500,
   FILTER_RESONANCE: 1,
   TREMOLO_RATE: 5,

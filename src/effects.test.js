@@ -39,10 +39,10 @@ describe('effects module', () => {
 
   it('exports configurable effect parameters', () => {
     expect(effects.DELAY_TIME).toBe(0.28);
-    expect(effects.DELAY_FEEDBACK).toBe(0.32);
-    expect(effects.DELAY_SEND_LEVEL).toBe(0.22);
-    expect(effects.REVERB_DECAY).toBe(2.2);
-    expect(effects.REVERB_SEND_LEVEL).toBe(0.18);
+    expect(effects.DELAY_FEEDBACK).toBe(0.5);
+    expect(effects.DELAY_SEND_LEVEL).toBe(0.38);
+    expect(effects.REVERB_DECAY).toBe(3.5);
+    expect(effects.REVERB_SEND_LEVEL).toBe(0.35);
     expect(effects.FILTER_CUTOFF).toBe(2500);
     expect(effects.FILTER_RESONANCE).toBe(1);
     expect(effects.TREMOLO_RATE).toBe(5);
