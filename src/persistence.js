@@ -1,4 +1,4 @@
-import { settings, setHoldEnabled } from './settings.js';
+import { settings, setHoldEnabled, setBassEnabled } from './settings.js';
 import {
   audio,
   setWaveType,
@@ -56,6 +56,7 @@ const oneOf = (allowed) => (v) => allowed.includes(v);
 const SCHEMA = {
   keyRoot: { read: () => settings.currentKeyRoot, write: setKeyRoot, valid: number(-12, 11) },
   hold: { read: () => settings.holdEnabled, write: setHoldEnabled, valid: boolean },
+  bass: { read: () => settings.bassEnabled, write: setBassEnabled, valid: boolean },
   wave: { read: () => audio.currentWaveType, write: setWaveType, valid: oneOf(chords.WAVE_TYPES) },
 
   glide: { read: () => audio.glideEnabled, write: setGlideEnabled, valid: boolean },

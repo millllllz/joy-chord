@@ -249,6 +249,13 @@ function degreeAtPoint(x, y) {
 
 function voicesForDegree(d, direction) {
   const target = new Map();
+  // Set before the chord tones (not after) so it sits first in insertion
+  // order — ORDERS in arpeggiator.js assumes ascending-pitch id order, and
+  // the bass note is always the lowest-pitched voice.
+  if (settings.bassEnabled) {
+    const bassSemitone = settings.currentKeyRoot + d.semitone - 24;
+    target.set(`${d.key}:bass:${bassSemitone}`, noteFreq(bassSemitone));
+  }
   getChordIntervals(d.quality, direction).forEach(interval => {
     const semitone = settings.currentKeyRoot + d.semitone + interval;
     target.set(`${d.key}:${semitone}`, noteFreq(semitone));
@@ -256,12 +263,14 @@ function voicesForDegree(d, direction) {
   return target;
 }
 
-// Ids are `${degreeKey}:${semitone}`, so the frequency is recoverable from
-// the id alone without a live audio-node lookup — used to build the "old"
-// side of a reconcileVoices() call from bookkeeping (heldVoices) rather
-// than from the nodes themselves.
+// Ids are `${degreeKey}:${semitone}` (or `${degreeKey}:bass:${semitone}`
+// for the optional bass note), so the frequency is recoverable from the id
+// alone without a live audio-node lookup — used to build the "old" side of
+// a reconcileVoices() call from bookkeeping (heldVoices) rather than from
+// the nodes themselves. The semitone is always the last segment.
 function noteFreqFromId(id) {
-  return noteFreq(Number(id.split(':')[1]));
+  const parts = id.split(':');
+  return noteFreq(Number(parts[parts.length - 1]));
 }
 
 // Mirrors the resolved chord name into both joysticks' center circles — the

@@ -26,7 +26,7 @@ import {
   setTremoloRate,
   setTremoloDepth,
 } from './effects.js';
-import { init as initSettings, settings, setHoldEnabled } from './settings.js';
+import { init as initSettings, settings, setHoldEnabled, setBassEnabled } from './settings.js';
 import { setWaveType } from './audio.js';
 import { loadSettings, scheduleSave, flushSave } from './persistence.js';
 import { init as initDegreeJoystick, releaseAllHeld, syncArpToHeldChord, setKeyRoot } from './degree-joystick.js';
@@ -289,6 +289,22 @@ holdToggleBtn.addEventListener('click', () => {
 // one had no initial sync at all — harmless while it always started off, but
 // a restored Hold would have been active with the button still looking idle.
 syncHoldBtn();
+
+// No adjustable parameter, so a direct click-toggle like Hold rather than
+// a dialog. Read by voicesForDegree (degree-joystick.js) on the next chord
+// change — doesn't retroactively add/remove the bass note from whatever is
+// already sounding.
+const bassToggleBtn = document.getElementById('bass-toggle');
+const syncBassBtn = () => {
+  bassToggleBtn.classList.toggle('active', settings.bassEnabled);
+  bassToggleBtn.setAttribute('aria-pressed', String(settings.bassEnabled));
+};
+bassToggleBtn.addEventListener('click', () => {
+  setBassEnabled(!settings.bassEnabled);
+  syncBassBtn();
+  scheduleSave();
+});
+syncBassBtn();
 
 // Basic ADSR — always active, so no enabledCheckbox (see wireFxDialog).
 // Shapes every voice's gain from the moment it starts, not just an

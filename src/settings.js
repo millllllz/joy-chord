@@ -8,6 +8,9 @@ export const settings = {
   // When on, both joysticks latch on release instead of stopping — see
   // degree-joystick.js/modifier-joystick.js for where this is read.
   holdEnabled: false,
+  // When on, voicesForDegree (degree-joystick.js) adds the chord root two
+  // octaves down alongside the regular chord tones.
+  bassEnabled: false,
 };
 
 export function init() {
@@ -53,4 +56,8 @@ export function init() {
 
 export function setHoldEnabled(enabled) {
   settings.holdEnabled = enabled;
+}
+
+export function setBassEnabled(enabled) {
+  settings.bassEnabled = enabled;
 }
