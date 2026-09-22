@@ -132,8 +132,86 @@ const CHORD_SUFFIXES = {
 
 // The chord name a degree actually sounds right now: its root note name
 // (transposed by the current key) plus the symbol for whatever the held
-// direction does to its triad.
-export function resolvedChordName(keyRoot, degree, direction) {
+// direction does to its triad. modifierSet defaults to 'default' so every
+// existing 3-argument call site keeps behaving exactly as before.
+export function resolvedChordName(keyRoot, degree, direction, modifierSet = 'default') {
   const rootName = chords.KEY_NAMES[(keyRoot + degree.semitone) % 12];
-  return `${rootName}${CHORD_SUFFIXES[degree.quality][direction]}`;
+  if (modifierSet === 'extended' && direction === 'up') {
+    // Same real-time major/minor toggle as Default's own 'up' — see
+    // getModifierChord below for why this is the one direction Extended
+    // can't give a fixed suffix for.
+    return `${rootName}${CHORD_SUFFIXES[degree.quality].up}`;
+  }
+  const entry = MODIFIER_CHORD_SETS[modifierSet]?.[direction];
+  const suffix = entry ? entry.suffix : CHORD_SUFFIXES[degree.quality][direction];
+  return `${rootName}${suffix}`;
+}
+
+// Extended and Chromatic joystick modes, from the HiChord manual (manual.
+// hichord.shop): two alternate 8-direction chord sets you switch the whole
+// modifier stick to, selected via #modifier-set-select. Unlike Default's
+// getChordIntervals — where every direction is defined *relative to* the
+// held degree's own major/minor/diminished quality — every chord here is a
+// fixed, fully-specified shape built on the degree's root alone: you can't
+// have a "half-diminished 7th" built on a major triad, since the name
+// already states its own quality in full, so none of these fifteen chords
+// vary with what the held degree's natural quality happens to be. Also,
+// unlike Default (whose CHORD_SUFFIXES/CHORD_LABELS are split across two
+// separate tables keyed differently), each entry here bundles its label,
+// its resolvedChordName() suffix, and its interval list together, since
+// all three are 1:1 with the (set, direction) pair rather than varying by
+// quality the way Default's do.
+//
+// Interval sets follow standard jazz chord-symbol voicings; where the
+// manual's prose ("stacks 5 notes", "altered 5th and altered 9th") allows
+// more than one valid reading, the choice made is noted per chord below.
+const EXTENDED_CHORDS = {
+  // 'up' is deliberately absent — Extended's own manual entry for it
+  // ("flips the 3rd up or down a half step") is the same real-time
+  // major/minor toggle Default's 'up' already is, not a fixed chord, so it
+  // has no interval list or suffix of its own; getModifierChord/
+  // resolvedChordName special-case it back to the shared toggle logic.
+  down:         { label: 'Dom7#9',    suffix: '7#9',    intervals: [0, 4, 7, 10, 15] }, // "Hendrix chord": b7 + #9 (m3 up an octave)
+  left:         { label: 'Sus4+7',    suffix: '7sus4',  intervals: [0, 5, 7, 10] },      // sus4 triad + flat 7
+  right:        { label: 'Add11',     suffix: 'add11',  intervals: [0, 4, 7, 17] },      // major triad + natural 11 (4th up an octave), no 7th
+  'up-left':    { label: 'Half-dim7', suffix: 'm7b5',   intervals: [0, 3, 6, 10] },      // diminished triad + flat 7
+  'up-right':   { label: 'Dom9',      suffix: '9',      intervals: [0, 4, 7, 10, 14] },  // dominant 7th + 9
+  'down-left':  { label: 'Add9',      suffix: 'add9',   intervals: [0, 4, 7, 14] },      // major triad + 9, no 7th
+  // "Stacks 5 notes for a wide, open sound" — 5 distinct pitches; the 5th
+  // is the one degree a jazz voicing conventionally drops first, so this
+  // omits it rather than the 9th or 11th.
+  'down-right': { label: 'Min11',     suffix: 'm11',    intervals: [0, 3, 10, 14, 17] }, // root, m3, b7, 9, 11 (5th omitted)
+};
+
+const CHROMATIC_CHORDS = {
+  up:           { label: 'Min(Maj7)', suffix: 'm(maj7)', intervals: [0, 3, 7, 11] },        // minor triad + natural 7th ("James Bond" chord)
+  down:         { label: 'Maj13',     suffix: 'maj13',   intervals: [0, 4, 7, 11, 14, 21] }, // major triad + natural 7 + 9 + 13 (6th up an octave)
+  left:         { label: 'Half-dim7', suffix: 'm7b5',    intervals: [0, 3, 6, 10] },         // diminished triad + flat 7 (same shape as Extended's up-left; different wedge, different mode)
+  right:        { label: '6/9',       suffix: '6/9',     intervals: [0, 4, 7, 9, 14] },      // major triad + 6 + 9, no 7th
+  'up-left':    { label: 'Maj7#11',   suffix: 'maj7#11', intervals: [0, 4, 7, 11, 18] },     // major 7th + raised 11 (Lydian color)
+  'up-right':   { label: 'Dom13',     suffix: '13',      intervals: [0, 4, 7, 10, 14, 21] }, // dominant 7th + 9 + 13
+  'down-left':  { label: 'Dom7b9',    suffix: '7b9',     intervals: [0, 4, 7, 10, 13] },     // dominant 7th + flatted 9
+  // "Flat 7th + altered 5th + altered 9th": one alteration of each, read as
+  // #5 (rather than b5, which would collide with Half-dim7's own shape)
+  // and b9 — a standard, commonly-voiced reading of "altered dominant".
+  'down-right': { label: 'Dom7alt',   suffix: '7alt',    intervals: [0, 4, 8, 10, 13] },     // root, 3, #5, b7, b9
+};
+
+export const MODIFIER_CHORD_SETS = { extended: EXTENDED_CHORDS, chromatic: CHROMATIC_CHORDS };
+export const MODIFIER_SET_NAMES = ['default', 'extended', 'chromatic'];
+export const MODIFIER_SET_LABELS = { default: 'Default', extended: 'Extended', chromatic: 'Chromatic' };
+
+// What a direction actually sounds under the given modifier set: Default
+// always defers to getChordIntervals unchanged (MODIFIER_CHORD_SETS has no
+// 'default' entry, so the lookup below simply misses and falls through) —
+// zero behavior change for anyone who never touches the new dropdown.
+// Extended's 'up' toggle and every mode's 'center' (a plain triad, not one
+// of the 7 real wedges) fall through the same way, for the same reason:
+// neither set defines an entry for them.
+export function getModifierChord(modifierSet, quality, direction) {
+  if (modifierSet === 'extended' && direction === 'up') {
+    return getChordIntervals(quality, direction);
+  }
+  const entry = MODIFIER_CHORD_SETS[modifierSet]?.[direction];
+  return entry ? entry.intervals : getChordIntervals(quality, direction);
 }

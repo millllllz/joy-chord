@@ -1,4 +1,4 @@
-import { chords } from './chords.js';
+import { chords, MODIFIER_SET_NAMES, MODIFIER_SET_LABELS } from './chords.js';
 import { audio } from './audio.js';
 
 export const settings = {
@@ -11,6 +11,9 @@ export const settings = {
   // When on, voicesForDegree (degree-joystick.js) adds the chord root two
   // octaves down alongside the regular chord tones.
   bassEnabled: false,
+  // Which of the modifier stick's 8-direction chord sets is active — see
+  // MODIFIER_SET_NAMES/getModifierChord in chords.js.
+  modifierSet: 'default',
 };
 
 export function init() {
@@ -52,6 +55,19 @@ export function init() {
   // Same split as the key dropdown above: contents here, behaviour in
   // index.js.
   waveSelectEl.value = audio.currentWaveType;
+
+  const modifierSetSelectEl = document.getElementById('modifier-set-select');
+  MODIFIER_SET_NAMES.forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = MODIFIER_SET_LABELS[name];
+    modifierSetSelectEl.appendChild(option);
+  });
+  // Same split again: the real setModifierSet lives in degree-joystick.js
+  // (it re-voices a held chord and re-renders the wedge labels), so — like
+  // setKeyRoot — it's wired from index.js rather than here, to avoid the
+  // same import cycle.
+  modifierSetSelectEl.value = settings.modifierSet;
 }
 
 export function setHoldEnabled(enabled) {

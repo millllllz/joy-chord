@@ -27,8 +27,8 @@ import {
   setTremoloDepth,
 } from './effects.js';
 import { arpeggiator, ORDER_NAMES, setArpEnabled, setArpOrder, setArpRate } from './arpeggiator.js';
-import { setKeyRoot } from './degree-joystick.js';
-import { chords } from './chords.js';
+import { setKeyRoot, setModifierSet } from './degree-joystick.js';
+import { chords, MODIFIER_SET_NAMES } from './chords.js';
 
 // Bumping the version in the key abandons every older blob outright, which
 // is the whole migration story: these are all re-tweakable in seconds, so
@@ -57,6 +57,7 @@ const SCHEMA = {
   keyRoot: { read: () => settings.currentKeyRoot, write: setKeyRoot, valid: number(-12, 11) },
   hold: { read: () => settings.holdEnabled, write: setHoldEnabled, valid: boolean },
   bass: { read: () => settings.bassEnabled, write: setBassEnabled, valid: boolean },
+  modifierSet: { read: () => settings.modifierSet, write: setModifierSet, valid: oneOf(MODIFIER_SET_NAMES) },
   wave: { read: () => audio.currentWaveType, write: setWaveType, valid: oneOf(chords.WAVE_TYPES) },
 
   glide: { read: () => audio.glideEnabled, write: setGlideEnabled, valid: boolean },

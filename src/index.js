@@ -29,7 +29,7 @@ import {
 import { init as initSettings, settings, setHoldEnabled, setBassEnabled } from './settings.js';
 import { setWaveType } from './audio.js';
 import { loadSettings, scheduleSave, flushSave } from './persistence.js';
-import { init as initDegreeJoystick, releaseAllHeld, syncArpToHeldChord, setKeyRoot } from './degree-joystick.js';
+import { init as initDegreeJoystick, releaseAllHeld, syncArpToHeldChord, setKeyRoot, setModifierSet } from './degree-joystick.js';
 import { init as initModifierJoystick, setJoyDirection } from './modifier-joystick.js';
 import { init as initDebug, debugLog } from './debug.js';
 import { chords } from './chords.js';
@@ -404,6 +404,14 @@ keySelectEl.addEventListener('change', () => {
 const waveSelectEl = document.getElementById('wave-select');
 waveSelectEl.addEventListener('change', () => {
   setWaveType(waveSelectEl.value);
+  scheduleSave();
+});
+
+// Same split, same reason: the real setModifierSet lives in degree-
+// joystick.js (it re-voices a held chord and repaints all 8 wedge labels).
+const modifierSetSelectEl = document.getElementById('modifier-set-select');
+modifierSetSelectEl.addEventListener('change', () => {
+  setModifierSet(modifierSetSelectEl.value);
   scheduleSave();
 });
 

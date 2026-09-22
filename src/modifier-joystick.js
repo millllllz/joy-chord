@@ -1,6 +1,6 @@
 import { degreeJoystick, setDirection } from './degree-joystick.js';
 import { wedgePath } from './wedge-geometry.js';
-import { chords, qualityLabel } from './chords.js';
+import { chords, qualityLabel, MODIFIER_CHORD_SETS } from './chords.js';
 import { settings } from './settings.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -28,14 +28,18 @@ function svgEl(tag, attrs) {
 const MODIFIER_DIRECTIONS = ['up', 'up-right', 'right', 'down-right', 'down', 'down-left', 'left', 'up-left'];
 const MODIFIER_ANGLE_STEP = 360 / MODIFIER_DIRECTIONS.length;
 
-// The up/right/down-left/left wedges each do something different depending on
-// the held chord's quality (see chords.QUALITY_LABELS), so their label tracks
-// that outcome: a single word (e.g. "min") when a sole quality is held, or the
-// default two-line "A/B" form (e.g. "Maj" over "Min") when nothing/mixed is held.
+// In Default mode, the up/right/down-left/left wedges each do something
+// different depending on the held chord's quality (see chords.QUALITY_
+// LABELS), so their label tracks that outcome: a single word (e.g. "min")
+// when a sole quality is held, or the default two-line "A/B" form (e.g.
+// "Maj" over "Min") when nothing/mixed is held. Extended's own 'up' is the
+// same real-time toggle (see chords.js), so it reuses this exact table too;
+// Chromatic has no toggle direction at all — every one of its 8 is a fixed
+// named chord, see MODIFIER_CHORD_SETS.
 const QUALITY_WEDGE_DEFAULTS = {
   up: 'Maj/Min', right: 'Maj7/min7', 'down-left': '6th/Sus2', left: 'Dim/Min',
 };
-const qualityWedgeLabels = {}; // direction -> label <text> element
+const joyLabelEls = {}; // direction -> label <text> element, all 8
 
 // Clear space between a split label's two lines, in SVG user units, with
 // the divider rule centred in it. Matches what the previous em-based
@@ -63,8 +67,12 @@ function renderJoyLabel(labelEl, text, resolved) {
   const x = Number(labelEl.getAttribute('x'));
   const y = Number(labelEl.getAttribute('y'));
 
-  // Clear any previous content and divider rule.
+  // Clear any previous content and divider rule, plus any inline font-size
+  // renderSingleLineLabel may have left behind switching modifier sets —
+  // this wedge's two tspans would otherwise inherit a shrink that was
+  // sized for a completely different, longer single-line label.
   labelEl.textContent = '';
+  labelEl.style.fontSize = '';
   const prevRule = labelEl.parentNode.querySelector(`.joy-label-rule[data-dir="${dir}"]`);
   if (prevRule) prevRule.remove();
 
@@ -113,10 +121,41 @@ function renderJoyLabel(labelEl, text, resolved) {
   labelEl.parentNode.insertBefore(rule, labelEl.nextSibling);
 }
 
-export function updateQualityWedgeLabels() {
+// A fixed, single-line label — every wedge in Chromatic mode, and every
+// wedge in Default/Extended except the handful driven by renderJoyLabel
+// above. No two-line split (nothing here varies with the held quality, so
+// there's no second option to show) and no divider rule.
+function renderSingleLineLabel(labelEl, text) {
+  const dir = labelEl.getAttribute('data-dir');
+  const prevRule = labelEl.parentNode.querySelector(`.joy-label-rule[data-dir="${dir}"]`);
+  if (prevRule) prevRule.remove();
+  labelEl.textContent = text;
+  // Extended/Chromatic names (Half-dim7, Min(Maj7), Maj7#11, Dom7alt, ...)
+  // run longer than Default's short fixed words (Dom7, 9th, Sus4, Aug) —
+  // same length-based shrink idiom already used for the centre chord-name
+  // readout in degree-joystick.js's updateChordNameLabel.
+  labelEl.style.fontSize = text.length > 7 ? '6.5px' : text.length > 5 ? '7.5px' : '';
+}
+
+// Repaints every one of the 8 wedge labels for whatever modifier set is
+// currently selected (settings.modifierSet) and, where it matters, the
+// quality of whatever's currently held. Called on init, on every press/
+// release (the held quality can flip which half of a Default/Extended
+// split label is dimmed), and whenever the modifier set itself changes.
+export function renderWedgeLabels() {
+  const set = settings.modifierSet;
   const quality = soleHeldQuality();
-  Object.entries(qualityWedgeLabels).forEach(([direction, el]) => {
-    renderJoyLabel(el, QUALITY_WEDGE_DEFAULTS[direction], quality ? qualityLabel(direction, quality) : null);
+  MODIFIER_DIRECTIONS.forEach(dir => {
+    const el = joyLabelEls[dir];
+    // Default's 4 quality-split wedges, plus Extended's 'up' (the same
+    // real-time toggle — see chords.js) — everything else, in every mode,
+    // is a single fixed word/name with nothing to resolve against quality.
+    if ((set === 'default' && dir in QUALITY_WEDGE_DEFAULTS) || (set === 'extended' && dir === 'up')) {
+      renderJoyLabel(el, QUALITY_WEDGE_DEFAULTS[dir], quality ? qualityLabel(dir, quality) : null);
+      return;
+    }
+    const fixedLabel = set === 'default' ? chords.CHORD_LABELS[dir] : MODIFIER_CHORD_SETS[set][dir]?.label;
+    renderSingleLineLabel(el, fixedLabel ?? '');
   });
 }
 
@@ -134,12 +173,13 @@ export function init() {
   });
   const joyWedges = modifierJoystick.joystickEl.querySelectorAll('.joy-wedge');
 
-  // Wire up the quality-dependent wedge labels and render their initial
-  // (nothing-held) two-line default form.
-  Object.keys(QUALITY_WEDGE_DEFAULTS).forEach(dir => {
-    qualityWedgeLabels[dir] = modifierJoystick.joystickEl.querySelector(`.joy-label[data-dir="${dir}"]`);
+  // Wire up all 8 wedge labels and render their initial form for whatever
+  // modifier set is currently active (already restored from storage by the
+  // time this runs — see loadSettings() in index.js).
+  MODIFIER_DIRECTIONS.forEach(dir => {
+    joyLabelEls[dir] = modifierJoystick.joystickEl.querySelector(`.joy-label[data-dir="${dir}"]`);
   });
-  updateQualityWedgeLabels();
+  renderWedgeLabels();
 
   const modifierKeyToDir = {
     // Interleaved clockwise from top: odds (jkl;) home row, evens (iop[) top row

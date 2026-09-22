@@ -1,8 +1,8 @@
 import { stopVoice, noteFreq, reconcileVoices } from './audio.js';
 import { effects } from './effects.js';
-import { chords, getChordIntervals, resolvedChordName } from './chords.js';
+import { chords, getModifierChord, resolvedChordName } from './chords.js';
 import { settings } from './settings.js';
-import { updateQualityWedgeLabels } from './modifier-joystick.js';
+import { renderWedgeLabels } from './modifier-joystick.js';
 import { arpeggiator, updateArpChord } from './arpeggiator.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -256,7 +256,7 @@ function voicesForDegree(d, direction) {
     const bassSemitone = settings.currentKeyRoot + d.semitone - 24;
     target.set(`${d.key}:bass:${bassSemitone}`, noteFreq(bassSemitone));
   }
-  getChordIntervals(d.quality, direction).forEach(interval => {
+  getModifierChord(settings.modifierSet, d.quality, direction).forEach(interval => {
     const semitone = settings.currentKeyRoot + d.semitone + interval;
     target.set(`${d.key}:${semitone}`, noteFreq(semitone));
   });
@@ -281,7 +281,7 @@ function noteFreqFromId(id) {
 function updateChordNameLabel() {
   const [heldKey] = degreeJoystick.heldDegrees.keys();
   const name = heldKey
-    ? resolvedChordName(settings.currentKeyRoot, degreeJoystick.degreeByKey.get(heldKey), degreeJoystick.currentDirection)
+    ? resolvedChordName(settings.currentKeyRoot, degreeJoystick.degreeByKey.get(heldKey), degreeJoystick.currentDirection, settings.modifierSet)
     : '';
   // Most names (root + maj7/m7/dim/aug/sus4/...) fit the circle at the
   // default 12px; a handful of rare quality+direction combos (e.g. a
@@ -350,7 +350,7 @@ function pressDegree(d) {
   d.wedgeEl.classList.add('active');
   d.labelEl.classList.add('active');
   d.qualityEl.classList.add('active');
-  updateQualityWedgeLabels();
+  renderWedgeLabels();
   updateChordNameLabel();
 }
 
@@ -368,7 +368,7 @@ function releaseDegree(d) {
     (degreeJoystick.heldVoices.get(d.key) || new Set()).forEach(id => stopVoice(id));
   }
   clearDegreeState(d);
-  updateQualityWedgeLabels();
+  renderWedgeLabels();
   updateChordNameLabel();
 }
 
@@ -421,5 +421,22 @@ export function setKeyRoot(root) {
   // Same as setDirection above: the held chord just changed pitch, so the
   // centre readout naming it has to be rebuilt too, or it keeps showing the
   // old key's chord while the new one sounds.
+  updateChordNameLabel();
+}
+
+// Wired to #modifier-set-select in index.js, same reasoning as setKeyRoot
+// above (real logic here, not in settings.js, to avoid an import cycle).
+// Switching sets changes both what a held direction sounds — Extended/
+// Chromatic replace Default's per-quality tables with fixed absolute
+// chords, see getModifierChord in chords.js — and what every wedge is
+// labelled, so a held chord needs re-voicing exactly like a key change,
+// and every wedge (not just the 4 quality-dependent ones) needs repainting.
+export function setModifierSet(set) {
+  if (set === settings.modifierSet) return;
+  settings.modifierSet = set;
+  degreeJoystick.heldDegrees.forEach((_, key) => {
+    updateDegreeVoicing(degreeJoystick.degreeByKey.get(key), degreeJoystick.currentDirection);
+  });
+  renderWedgeLabels();
   updateChordNameLabel();
 }

@@ -415,6 +415,12 @@
     background-size: 10px 6px;
     padding-right: 22px;
   }
+  /* "Chromatic" (its longest option) clips inside the shared 72px width
+     every other .key-select is tuned for — widen this one specifically
+     rather than the base class, which key/wave are already sized against. */
+  .modifier-set-select {
+    width: 92px;
+  }
   .key-select:hover {
     background-color: var(--panel-hover);
   }

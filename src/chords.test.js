@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { chords, getChordIntervals, qualityLabel, resolvedChordName } from './chords.js';
+import {
+  chords, getChordIntervals, qualityLabel, resolvedChordName,
+  getModifierChord, MODIFIER_CHORD_SETS, MODIFIER_SET_NAMES,
+} from './chords.js';
 
 describe('chords module', () => {
   describe('DEGREES', () => {
@@ -183,6 +186,81 @@ describe('chords module', () => {
       expect(resolvedChordName(0, ii, 'up-left')).toBe('Daug');
       expect(resolvedChordName(0, vii, 'up-right')).toBe('B7');
       expect(resolvedChordName(0, vii, 'up-left')).toBe('Baug');
+    });
+  });
+
+  describe('MODIFIER_CHORD_SETS / getModifierChord', () => {
+    const I = chords.DEGREES[0];   // major, semitone 0
+    const ii = chords.DEGREES[1];  // minor, semitone 2
+    const vii = chords.DEGREES[6]; // diminished, semitone 11
+
+    it('lists default, extended and chromatic', () => {
+      expect(MODIFIER_SET_NAMES).toEqual(['default', 'extended', 'chromatic']);
+    });
+
+    it('defines all 7 non-toggle directions for extended, and all 8 for chromatic', () => {
+      const extendedDirs = Object.keys(MODIFIER_CHORD_SETS.extended).sort();
+      expect(extendedDirs).toEqual(
+        ['down', 'down-left', 'down-right', 'left', 'right', 'up-left', 'up-right'].sort()
+      );
+      const chromaticDirs = Object.keys(MODIFIER_CHORD_SETS.chromatic).sort();
+      expect(chromaticDirs).toHaveLength(8);
+    });
+
+    it('every extended/chromatic entry has a label, a suffix and at least a triad worth of intervals', () => {
+      [MODIFIER_CHORD_SETS.extended, MODIFIER_CHORD_SETS.chromatic].forEach(table => {
+        Object.values(table).forEach(({ label, suffix, intervals }) => {
+          expect(typeof label).toBe('string');
+          expect(typeof suffix).toBe('string');
+          expect(intervals.length).toBeGreaterThanOrEqual(3);
+          expect(intervals[0]).toBe(0); // every chord is rooted at the held degree
+        });
+      });
+    });
+
+    it('default mode is untouched: getModifierChord defers to getChordIntervals', () => {
+      ['center', 'up', 'up-right', 'right', 'down-right', 'down', 'down-left', 'left', 'up-left'].forEach(dir => {
+        expect(getModifierChord('default', 'minor', dir)).toEqual(getChordIntervals('minor', dir));
+      });
+    });
+
+    it('extended mode returns fixed intervals regardless of the held degree\'s own quality', () => {
+      // Dom7#9 (down): major 3rd + b7 + #9, whether the degree is naturally
+      // major, minor or diminished.
+      expect(getModifierChord('extended', 'major', 'down')).toEqual([0, 4, 7, 10, 15]);
+      expect(getModifierChord('extended', 'minor', 'down')).toEqual([0, 4, 7, 10, 15]);
+      expect(getModifierChord('extended', 'diminished', 'down')).toEqual([0, 4, 7, 10, 15]);
+    });
+
+    it('extended\'s up direction is still the real-time major/minor toggle, not a fixed chord', () => {
+      expect(getModifierChord('extended', 'major', 'up')).toEqual(chords.BASE_TRIAD.minor);
+      expect(getModifierChord('extended', 'minor', 'up')).toEqual(chords.BASE_TRIAD.major);
+    });
+
+    it('chromatic mode has no toggle direction: up is a fixed chord too', () => {
+      expect(getModifierChord('chromatic', 'major', 'up')).toEqual([0, 3, 7, 11]);
+      expect(getModifierChord('chromatic', 'minor', 'up')).toEqual([0, 3, 7, 11]);
+    });
+
+    it('center is always the plain triad, in every modifier set', () => {
+      expect(getModifierChord('default', 'minor', 'center')).toEqual([0, 3, 7]);
+      expect(getModifierChord('extended', 'minor', 'center')).toEqual([0, 3, 7]);
+      expect(getModifierChord('chromatic', 'minor', 'center')).toEqual([0, 3, 7]);
+    });
+
+    it('resolvedChordName uses the fixed suffix for extended/chromatic', () => {
+      expect(resolvedChordName(0, I, 'down', 'extended')).toBe('C7#9');
+      expect(resolvedChordName(0, ii, 'down', 'extended')).toBe('D7#9');
+      expect(resolvedChordName(0, vii, 'up', 'chromatic')).toBe('Bm(maj7)');
+    });
+
+    it('resolvedChordName keeps the real toggle suffix for extended\'s up', () => {
+      expect(resolvedChordName(0, I, 'up', 'extended')).toBe('Cm');
+      expect(resolvedChordName(0, ii, 'up', 'extended')).toBe('D');
+    });
+
+    it('resolvedChordName defaults to plain Default-mode naming with no 4th argument', () => {
+      expect(resolvedChordName(0, I, 'down')).toBe('Csus4');
     });
   });
 
