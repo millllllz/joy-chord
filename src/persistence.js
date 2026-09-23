@@ -4,7 +4,6 @@ import {
   setWaveType,
   setGlideEnabled,
   setGlideTime,
-  setGlideEdgesEnabled,
   setEnvelopeAttack,
   setEnvelopeDecay,
   setEnvelopeSustain,
@@ -62,7 +61,6 @@ const SCHEMA = {
 
   glide: { read: () => audio.glideEnabled, write: setGlideEnabled, valid: boolean },
   glideTime: { read: () => audio.GLIDE_TIME, write: setGlideTime, valid: number(0.02, 0.4) },
-  glideEdges: { read: () => audio.glideEdgesEnabled, write: setGlideEdgesEnabled, valid: boolean },
 
   envAttack: { read: () => audio.ENVELOPE_ATTACK, write: setEnvelopeAttack, valid: number(0.001, 0.5) },
   envDecay: { read: () => audio.ENVELOPE_DECAY, write: setEnvelopeDecay, valid: number(0, 1) },

@@ -10,11 +10,6 @@ export const audio = {
   currentWaveType: 'sine',
   glideEnabled: false,
   GLIDE_TIME: 0.12,
-  // Sub-option of glide, only meaningful while glideEnabled is also true:
-  // extends gliding to voices with no pairing partner (a chord tone purely
-  // added or removed, not replaced) by having them glide to/from the
-  // nearest surviving chord tone instead of attacking/releasing in place.
-  glideEdgesEnabled: true,
   // Basic ADSR — always active (not an optional effect, so no *Enabled
   // flag): every voice's gain ramps 0 -> peak over ATTACK, then
   // peak -> peak*SUSTAIN over DECAY, then holds there until released,
@@ -130,10 +125,6 @@ export function setGlideTime(seconds) {
   audio.GLIDE_TIME = seconds;
 }
 
-export function setGlideEdgesEnabled(enabled) {
-  audio.glideEdgesEnabled = enabled;
-}
-
 export function setEnvelopeAttack(seconds) {
   audio.ENVELOPE_ATTACK = seconds;
 }
@@ -186,11 +177,10 @@ export function glideVoice(oldId, newId, newFreq) {
 // ("stale") and only in newTarget ("fresh") — are either hard
 // stopped/started, or, with glide on, paired off nearest-pitch-to-
 // nearest-pitch and glided. Any surplus on the longer side (the chord grew
-// or shrank) has no pairing partner: normally that still hard starts/stops
-// it, but with glideEdgesEnabled on, it instead glides to/from the nearest
-// tone that will actually survive the transition — a fresh tone eases in
-// from a neighbor instead of attacking cold, a stale one eases out toward
-// one instead of cutting off in place.
+// or shrank) has no pairing partner: it glides to/from the nearest tone
+// that will actually survive the transition instead of hard starting/
+// stopping — a fresh tone eases in from a neighbor instead of attacking
+// cold, a stale one eases out toward one instead of cutting off in place.
 export function reconcileVoices(oldTarget, newTarget) {
   const staleIds = [...oldTarget.keys()].filter(id => !newTarget.has(id));
   const freshIds = [...newTarget.keys()].filter(id => !oldTarget.has(id));
@@ -221,7 +211,7 @@ export function reconcileVoices(oldTarget, newTarget) {
   // all just attack cleanly like any first note would.
   const cameFromSilence = oldTarget.size === 0;
 
-  if (!audio.glideEdgesEnabled || cameFromSilence) {
+  if (cameFromSilence) {
     leftoverStale.forEach(id => stopVoice(id));
     leftoverFresh.forEach(id => startVoice(id, newTarget.get(id)));
     return;

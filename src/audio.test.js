@@ -7,7 +7,6 @@ import {
   stopVoice,
   setGlideEnabled,
   setGlideTime,
-  setGlideEdgesEnabled,
   setEnvelopeAttack,
   setEnvelopeDecay,
   setEnvelopeSustain,
@@ -23,7 +22,6 @@ describe('audio module', () => {
     audio.currentWaveType = 'sine';
     audio.glideEnabled = false;
     audio.GLIDE_TIME = 0.12;
-    audio.glideEdgesEnabled = false;
     audio.ENVELOPE_ATTACK = 0.01;
     audio.ENVELOPE_DECAY = 0.1;
     audio.ENVELOPE_SUSTAIN = 0.7;
@@ -45,12 +43,6 @@ describe('audio module', () => {
     expect(audio.glideEnabled).toBe(true);
     setGlideTime(0.25);
     expect(audio.GLIDE_TIME).toBe(0.25);
-  });
-
-  it('defaults glide-edges off and allows toggling it', () => {
-    expect(audio.glideEdgesEnabled).toBe(false);
-    setGlideEdgesEnabled(true);
-    expect(audio.glideEdgesEnabled).toBe(true);
   });
 
   it('calculates note frequency correctly from semitones', () => {
@@ -253,22 +245,30 @@ describe('audio module', () => {
       expect(audio.voices.has('highOld')).toBe(false);
     });
 
-    it('hard starts/stops the surplus when the chord grows or shrinks, even with glide on', () => {
+    it('glides the surplus in from its nearest surviving neighbor when the chord grows, even with only one pairing partner', () => {
       setGlideEnabled(true);
       startVoice('root', 440);
       reconcileVoices(
         new Map([['root', 440]]),
         new Map([['root2', 460], ['third', 550], ['fifth', 660]]),
       );
-      // One pairing partner glides; the other two fresh ids have nothing to
-      // pair with, so they hard-start instead.
+      // 'root2' pairs directly with 'root' and glides to it. 'third' and
+      // 'fifth' have no pairing partner (surplus), so edges-glide eases each
+      // in from its nearest sibling in the new chord (see the calls below)
+      // instead of attacking cold — but they still land on their own true
+      // pitch once the ramp completes, same as a plain attack would.
       expect(audio.voices.get('root2').osc.frequency.value).toBe(460);
       expect(audio.voices.get('third').osc.frequency.value).toBe(550);
       expect(audio.voices.get('fifth').osc.frequency.value).toBe(660);
       expect(audio.voices.size).toBe(3);
+      // 'third' (550) is nearer 'root2' (460) than 'fifth' (660); 'fifth'
+      // (660) is nearer 'third' (550) than 'root2' (460) — each glides in
+      // from that nearest sibling rather than its own pitch.
+      expect(audio.voices.get('third').osc.frequency.calls[0]).toEqual({ method: 'setValueAtTime', value: 460, time: 0 });
+      expect(audio.voices.get('fifth').osc.frequency.calls[0]).toEqual({ method: 'setValueAtTime', value: 550, time: 0 });
     });
 
-    it('does not leak the forEach array index into stopVoice as glideToFreq when edges are off', () => {
+    it('does not leak the forEach array index into stopVoice as glideToFreq', () => {
       // staleIds.forEach(id => stopVoice(id)) must stay explicit — passing
       // stopVoice directly to forEach would leak the index as a 2nd arg.
       setGlideEnabled(true);
@@ -286,10 +286,9 @@ describe('audio module', () => {
       expect(freqCalls.some(c => c.value === 1)).toBe(false);
     });
 
-    describe('with glideEdgesEnabled', () => {
+    describe('edges glide', () => {
       beforeEach(() => {
         setGlideEnabled(true);
-        setGlideEdgesEnabled(true);
       });
 
       it('glides a purely-added tone in from the nearest surviving tone', () => {
@@ -321,17 +320,6 @@ describe('audio module', () => {
         expect(freqCalls[freqCalls.length - 1]).toEqual({
           method: 'linearRampToValueAtTime', value: 660, time: audio.GLIDE_TIME,
         });
-      });
-
-      it('still uses hard start/stop for the surplus when edges are off', () => {
-        setGlideEdgesEnabled(false);
-        startVoice('root', 440);
-        reconcileVoices(
-          new Map([['root', 440]]),
-          new Map([['root', 440], ['seventh', 700]]),
-        );
-        const calls = audio.voices.get('seventh').osc.frequency.calls;
-        expect(calls).toEqual([{ method: 'setValueAtTime', value: 700, time: 0 }]);
       });
 
       it('does not glide a brand new chord\'s notes in from each other when nothing was held before', () => {

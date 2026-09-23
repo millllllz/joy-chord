@@ -3,7 +3,6 @@ import {
   audio,
   setGlideEnabled,
   setGlideTime,
-  setGlideEdgesEnabled,
   setEnvelopeAttack,
   setEnvelopeDecay,
   setEnvelopeSustain,
@@ -228,15 +227,6 @@ wireFxDialog({
       onInput: setGlideTime,
     },
   ],
-});
-
-// A sub-option of glide, not covered by wireFxDialog's single-checkbox
-// shape: wired directly rather than stretching that helper for one caller.
-const glideEdgesCheckbox = document.getElementById('glide-edges-checkbox');
-glideEdgesCheckbox.checked = audio.glideEdgesEnabled;
-glideEdgesCheckbox.addEventListener('change', () => {
-  setGlideEdgesEnabled(glideEdgesCheckbox.checked);
-  scheduleSave();
 });
 
 wireFxDialog({

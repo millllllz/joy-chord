@@ -84,10 +84,20 @@ export function init() {
   // Mouse interaction
   chords.DEGREES.forEach(d => {
     d.wedgeEl.addEventListener('mouseenter', () => pressDegree(d));
-    d.wedgeEl.addEventListener('mouseleave', () => {
+    d.wedgeEl.addEventListener('mouseleave', (e) => {
       // Latches while Hold is on — only entering the center circle (above)
       // or the joystick going out of use for keyboard/touch resets it.
       if (settings.holdEnabled) return;
+      // Dragging straight onto another wedge fires this mouseleave before
+      // that wedge's mouseenter/pressDegree — releasing here first would
+      // empty heldDegrees before pressDegree ever saw it, so its own steal
+      // logic (which glides) would find nothing to glide from and fall
+      // back to a hard attack, same bug the touchmove handler's comment
+      // describes avoiding. Leaving a same-key wedge for another wedge is
+      // left to pressDegree's steal path instead; only a genuine release
+      // (leaving to the center circle or off the pad) stops here.
+      const target = e.relatedTarget;
+      if (target && target.dataset && target.dataset.key) return;
       releaseDegree(d);
     });
   });
