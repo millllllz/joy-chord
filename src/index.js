@@ -32,7 +32,7 @@ import {
 import { init as initSettings, settings, setHoldEnabled, setBassEnabled } from './settings.js';
 import { setWaveType } from './audio.js';
 import { loadSettings, scheduleSave, flushSave } from './persistence.js';
-import { init as initDegreeJoystick, releaseAllHeld, syncArpToHeldChord, setKeyRoot, setModifierSet } from './degree-joystick.js';
+import { init as initDegreeJoystick, releaseAllHeld, syncArpToHeldChord, setKeyRoot, setModifierSet, setOctave } from './degree-joystick.js';
 import { init as initModifierJoystick, setJoyDirection } from './modifier-joystick.js';
 import { init as initDebug, debugLog } from './debug.js';
 import { chords } from './chords.js';
@@ -439,6 +439,14 @@ waveSelectEl.addEventListener('change', () => {
 const modifierSetSelectEl = document.getElementById('modifier-set-select');
 modifierSetSelectEl.addEventListener('change', () => {
   setModifierSet(modifierSetSelectEl.value);
+  scheduleSave();
+});
+
+// Same split again: the real setOctave lives in degree-joystick.js (it
+// re-voices a held chord).
+const octaveSelectEl = document.getElementById('octave-select');
+octaveSelectEl.addEventListener('change', () => {
+  setOctave(Number(octaveSelectEl.value));
   scheduleSave();
 });
 

@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { settings, setHoldEnabled } from './settings.js';
-// setKeyRoot lives in degree-joystick.js, which owns re-voicing whatever is
-// currently held; settings.js only holds the value it writes to.
-import { setKeyRoot } from './degree-joystick.js';
+// setKeyRoot/setOctave live in degree-joystick.js, which owns re-voicing
+// whatever is currently held; settings.js only holds the values they write.
+import { setKeyRoot, setOctave } from './degree-joystick.js';
+import { OCTAVE_RANGE } from './settings.js';
 
 describe('settings module', () => {
   beforeEach(() => {
     settings.currentKeyRoot = 0;
+    settings.octaveOffset = 0;
     settings.holdEnabled = false;
   });
 
@@ -20,6 +22,24 @@ describe('settings module', () => {
     setKeyRoot(3);
     setKeyRoot(3);
     expect(settings.currentKeyRoot).toBe(3);
+  });
+
+  it('tracks octave offset', () => {
+    expect(settings.octaveOffset).toBe(0);
+    setOctave(2);
+    expect(settings.octaveOffset).toBe(2);
+    setOctave(-2);
+    expect(settings.octaveOffset).toBe(-2);
+  });
+
+  it('ignores duplicate octave changes', () => {
+    setOctave(1);
+    setOctave(1);
+    expect(settings.octaveOffset).toBe(1);
+  });
+
+  it('exports the -2..2 octave range', () => {
+    expect(OCTAVE_RANGE).toEqual([-2, -1, 0, 1, 2]);
   });
 
   it('exports KEY_NAMES with 12 pitches', () => {

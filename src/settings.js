@@ -1,6 +1,8 @@
 import { chords, MODIFIER_SET_NAMES, MODIFIER_SET_LABELS } from './chords.js';
 import { audio } from './audio.js';
 
+export const OCTAVE_RANGE = [-2, -1, 0, 1, 2];
+
 export const settings = {
   currentKeyRoot: 0,
   KEY_NAMES: chords.KEY_NAMES,
@@ -14,6 +16,11 @@ export const settings = {
   // Which of the modifier stick's 8-direction chord sets is active — see
   // MODIFIER_SET_NAMES/getModifierChord in chords.js.
   modifierSet: 'default',
+  // Whole octaves (in semitones: octaveOffset * 12), added to every held
+  // chord tone and the Bass mode note alike — see voicesForDegree in
+  // degree-joystick.js. -2..2, matching the range most keyboards/synths
+  // offer for an octave-shift control.
+  octaveOffset: 0,
 };
 
 export function init() {
@@ -68,6 +75,17 @@ export function init() {
   // setKeyRoot — it's wired from index.js rather than here, to avoid the
   // same import cycle.
   modifierSetSelectEl.value = settings.modifierSet;
+
+  const octaveSelectEl = document.getElementById('octave-select');
+  OCTAVE_RANGE.forEach(offset => {
+    const option = document.createElement('option');
+    option.value = offset;
+    option.textContent = offset > 0 ? `+${offset}` : String(offset);
+    octaveSelectEl.appendChild(option);
+  });
+  // Same split again: the real setOctave lives in degree-joystick.js (it
+  // re-voices a held chord), wired from index.js.
+  octaveSelectEl.value = settings.octaveOffset;
 }
 
 export function setHoldEnabled(enabled) {

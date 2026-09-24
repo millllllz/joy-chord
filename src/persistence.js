@@ -30,7 +30,7 @@ import {
   setTremoloDepth,
 } from './effects.js';
 import { arpeggiator, ORDER_NAMES, setArpEnabled, setArpOrder, setArpRate } from './arpeggiator.js';
-import { setKeyRoot, setModifierSet } from './degree-joystick.js';
+import { setKeyRoot, setModifierSet, setOctave } from './degree-joystick.js';
 import { chords, MODIFIER_SET_NAMES } from './chords.js';
 
 // Bumping the version in the key abandons every older blob outright, which
@@ -58,6 +58,7 @@ const oneOf = (allowed) => (v) => allowed.includes(v);
 // would take the whole boot down with it.
 const SCHEMA = {
   keyRoot: { read: () => settings.currentKeyRoot, write: setKeyRoot, valid: number(-12, 11) },
+  octave: { read: () => settings.octaveOffset, write: setOctave, valid: number(-2, 2) },
   hold: { read: () => settings.holdEnabled, write: setHoldEnabled, valid: boolean },
   bass: { read: () => settings.bassEnabled, write: setBassEnabled, valid: boolean },
   modifierSet: { read: () => settings.modifierSet, write: setModifierSet, valid: oneOf(MODIFIER_SET_NAMES) },

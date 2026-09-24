@@ -262,12 +262,13 @@ function voicesForDegree(d, direction) {
   // Set before the chord tones (not after) so it sits first in insertion
   // order — ORDERS in arpeggiator.js assumes ascending-pitch id order, and
   // the bass note is always the lowest-pitched voice.
+  const octaveShift = settings.octaveOffset * 12;
   if (settings.bassEnabled) {
-    const bassSemitone = settings.currentKeyRoot + d.semitone - 24;
+    const bassSemitone = settings.currentKeyRoot + d.semitone - 24 + octaveShift;
     target.set(`${d.key}:bass:${bassSemitone}`, noteFreq(bassSemitone));
   }
   getModifierChord(settings.modifierSet, d.quality, direction).forEach(interval => {
-    const semitone = settings.currentKeyRoot + d.semitone + interval;
+    const semitone = settings.currentKeyRoot + d.semitone + interval + octaveShift;
     target.set(`${d.key}:${semitone}`, noteFreq(semitone));
   });
   return target;
@@ -432,6 +433,18 @@ export function setKeyRoot(root) {
   // centre readout naming it has to be rebuilt too, or it keeps showing the
   // old key's chord while the new one sounds.
   updateChordNameLabel();
+}
+
+// Wired to #octave-select in index.js, same reasoning as setKeyRoot above.
+// Unlike a key change, an octave shift doesn't touch the chord's identity
+// (a C major chord is still "C" two octaves up), so there's no
+// updateChordNameLabel() call here — only the actual pitch needs redoing.
+export function setOctave(offset) {
+  if (offset === settings.octaveOffset) return;
+  settings.octaveOffset = offset;
+  degreeJoystick.heldDegrees.forEach((_, key) => {
+    updateDegreeVoicing(degreeJoystick.degreeByKey.get(key), degreeJoystick.currentDirection);
+  });
 }
 
 // Wired to #modifier-set-select in index.js, same reasoning as setKeyRoot
