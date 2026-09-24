@@ -135,7 +135,13 @@ const CHORD_SUFFIXES = {
 // direction does to its triad. modifierSet defaults to 'default' so every
 // existing 3-argument call site keeps behaving exactly as before.
 export function resolvedChordName(keyRoot, degree, direction, modifierSet = 'default') {
-  const rootName = chords.KEY_NAMES[(keyRoot + degree.semitone) % 12];
+  // keyRoot can be negative (the key dropdown assigns A/A#/B values of
+  // -3/-2/-1 so the rotated list still reads as ascending pitch — see
+  // settings.js). Plain `%` returns a negative result for a negative
+  // operand in JS rather than wrapping into 0..11, which indexed before
+  // the start of KEY_NAMES and produced "undefined" for e.g. key A's
+  // degree I (-3 + 0 = -3).
+  const rootName = chords.KEY_NAMES[((keyRoot + degree.semitone) % 12 + 12) % 12];
   if (modifierSet === 'extended' && direction === 'up') {
     // Same real-time major/minor toggle as Default's own 'up' — see
     // getModifierChord below for why this is the one direction Extended

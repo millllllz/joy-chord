@@ -168,6 +168,17 @@ describe('chords module', () => {
       expect(resolvedChordName(2, ii, 'center')).toBe('Em');
     });
 
+    // The key dropdown assigns A/A#/B negative keyRoot values (-3/-2/-1) so
+    // its rotated A-first list still reads as ascending pitch (see
+    // settings.js) — a plain `% 12` on a negative sum indexed before the
+    // start of KEY_NAMES and produced "undefined" instead of wrapping.
+    it('transposes correctly for the negative keyRoots the key dropdown assigns to A/A#/B', () => {
+      expect(resolvedChordName(-3, I, 'center')).toBe('A');
+      expect(resolvedChordName(-3, ii, 'center')).toBe('Bm');
+      expect(resolvedChordName(-2, I, 'center')).toBe('A#');
+      expect(resolvedChordName(-1, I, 'center')).toBe('B');
+    });
+
     it('names dominant and major 7ths', () => {
       expect(resolvedChordName(0, I, 'up-right')).toBe('C7');
       expect(resolvedChordName(0, I, 'right')).toBe('Cmaj7');
