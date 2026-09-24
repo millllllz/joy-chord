@@ -2,6 +2,10 @@ import { settings, setHoldEnabled, setBassEnabled } from './settings.js';
 import {
   audio,
   setWaveType,
+  setUnisonEnabled,
+  setUnisonVoices,
+  setUnisonDetune,
+  setUnisonSpread,
   setGlideEnabled,
   setGlideTime,
   setEnvelopeAttack,
@@ -58,6 +62,11 @@ const SCHEMA = {
   bass: { read: () => settings.bassEnabled, write: setBassEnabled, valid: boolean },
   modifierSet: { read: () => settings.modifierSet, write: setModifierSet, valid: oneOf(MODIFIER_SET_NAMES) },
   wave: { read: () => audio.currentWaveType, write: setWaveType, valid: oneOf(chords.WAVE_TYPES) },
+
+  unison: { read: () => audio.unisonEnabled, write: setUnisonEnabled, valid: boolean },
+  unisonVoices: { read: () => audio.UNISON_VOICES, write: setUnisonVoices, valid: number(2, 4) },
+  unisonDetune: { read: () => audio.UNISON_DETUNE, write: setUnisonDetune, valid: number(0, 30) },
+  unisonSpread: { read: () => audio.UNISON_SPREAD, write: setUnisonSpread, valid: number(0, 1) },
 
   glide: { read: () => audio.glideEnabled, write: setGlideEnabled, valid: boolean },
   glideTime: { read: () => audio.GLIDE_TIME, write: setGlideTime, valid: number(0.02, 0.4) },

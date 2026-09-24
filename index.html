@@ -101,6 +101,25 @@
     </form>
   </dialog>
 
+  <dialog class="fx-dialog" id="unison-dialog">
+    <form method="dialog" class="fx-dialog-form">
+      <h2>Unison</h2>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Voices <span class="fx-dialog-value" id="unison-voices-value">3</span></span>
+        <input type="range" id="unison-voices-slider" min="2" max="4" step="1" value="3">
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Detune <span class="fx-dialog-value" id="unison-detune-value">12c</span></span>
+        <input type="range" id="unison-detune-slider" min="0" max="30" step="1" value="12">
+      </label>
+      <label class="fx-dialog-param">
+        <span class="fx-dialog-param-label">Spread <span class="fx-dialog-value" id="unison-spread-value">60%</span></span>
+        <input type="range" id="unison-spread-slider" min="0" max="1" step="0.01" value="0.6">
+      </label>
+      <button type="submit" class="fx-dialog-close">Close</button>
+    </form>
+  </dialog>
+
   <dialog class="fx-dialog" id="arp-dialog">
     <form method="dialog" class="fx-dialog-form">
       <h2>Arp</h2>
@@ -148,7 +167,7 @@
     </svg>
   </button>
 
-  <div class="build-version" id="build-version">eda8994</div>
+  <div class="build-version" id="build-version">418ec07</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
   <div class="debug-panel" id="debug-panel"></div>
 
@@ -176,6 +195,7 @@
           <button class="fx-toggle" id="tremolo-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Tremolo</button>
           <button class="fx-toggle" id="glide-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Glide</button>
           <button class="fx-toggle" id="arp-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Arp</button>
+          <button class="fx-toggle" id="unison-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Unison</button>
         </div>
         <div class="sound-controls">
           <span class="controls-group-label">Sound</span>
@@ -245,6 +265,6 @@
     </div>
   </div>
 
-<script type="module" src="src/index.js?v=eda8994"></script>
+<script type="module" src="src/index.js?v=418ec07"></script>
 </body>
 </html>

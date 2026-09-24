@@ -29,6 +29,10 @@ global.AudioContext = class MockAudioContext {
     return new MockAudioNode();
   }
 
+  createStereoPanner() {
+    return new MockAudioNode();
+  }
+
   createBuffer(channels, length, sampleRate) {
     const channelData = [];
     for (let i = 0; i < channels; i++) {
@@ -53,7 +57,9 @@ class MockAudioNode {
     this.delayTime = new MockAudioParam();
     this.type = 'sine';
     this.frequency = new MockAudioParam();
+    this.detune = new MockAudioParam();
     this.Q = new MockAudioParam();
+    this.pan = new MockAudioParam();
     // Recorded so tests can assert signal routing, which is otherwise
     // invisible to them — a misrouted node still passes every state check.
     this.connections = [];

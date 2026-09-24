@@ -5,6 +5,10 @@ import {
   setWaveType,
   startVoice,
   stopVoice,
+  setUnisonEnabled,
+  setUnisonVoices,
+  setUnisonDetune,
+  setUnisonSpread,
   setGlideEnabled,
   setGlideTime,
   setEnvelopeAttack,
@@ -20,6 +24,10 @@ describe('audio module', () => {
     audio.ctx = null;
     audio.voices = new Map();
     audio.currentWaveType = 'sine';
+    audio.unisonEnabled = false;
+    audio.UNISON_VOICES = 3;
+    audio.UNISON_DETUNE = 12;
+    audio.UNISON_SPREAD = 0.6;
     audio.glideEnabled = false;
     audio.GLIDE_TIME = 0.12;
     audio.ENVELOPE_ATTACK = 0.01;
@@ -79,6 +87,136 @@ describe('audio module', () => {
     startVoice('b', 550);
     setWaveType('triangle');
     expect([...audio.voices.values()].map(v => v.osc.type)).toEqual(['triangle', 'triangle']);
+  });
+
+  describe('unison', () => {
+    it('defaults off, 3 voices, 12 cents detune, 0.6 spread', () => {
+      expect(audio.unisonEnabled).toBe(false);
+      expect(audio.UNISON_VOICES).toBe(3);
+      expect(audio.UNISON_DETUNE).toBe(12);
+      expect(audio.UNISON_SPREAD).toBe(0.6);
+    });
+
+    it('allows setting each parameter', () => {
+      setUnisonEnabled(true);
+      expect(audio.unisonEnabled).toBe(true);
+      setUnisonVoices(4);
+      expect(audio.UNISON_VOICES).toBe(4);
+      setUnisonDetune(20);
+      expect(audio.UNISON_DETUNE).toBe(20);
+      setUnisonSpread(0.3);
+      expect(audio.UNISON_SPREAD).toBe(0.3);
+    });
+
+    it('with unison off, a voice is still exactly one oscillator, undetuned, no panner', () => {
+      startVoice('a', 440);
+      const voice = audio.voices.get('a');
+      expect(voice.oscs).toHaveLength(1);
+      expect(voice.osc).toBe(voice.oscs[0]);
+      expect(voice.osc.detune.value).toBe(0);
+      // No panner means the oscillator connects straight to the shared
+      // gain node, not through an intermediate stereo panner.
+      expect(voice.osc.connections).toEqual([voice.gainNode]);
+    });
+
+    it('with unison on, a voice is UNISON_VOICES oscillators', () => {
+      setUnisonEnabled(true);
+      startVoice('a', 440);
+      expect(audio.voices.get('a').oscs).toHaveLength(3);
+    });
+
+    it('spreads detune symmetrically, with the centre oscillator undetuned (odd voice count)', () => {
+      setUnisonEnabled(true);
+      setUnisonVoices(3);
+      setUnisonDetune(10);
+      startVoice('a', 440);
+      const detunes = audio.voices.get('a').oscs.map(o => o.detune.value);
+      expect(detunes).toEqual([-10, 0, 10]);
+    });
+
+    it('spreads detune symmetrically with no centre oscillator (even voice count)', () => {
+      setUnisonEnabled(true);
+      setUnisonVoices(4);
+      setUnisonDetune(9);
+      startVoice('a', 440);
+      const detunes = audio.voices.get('a').oscs.map(o => Math.round(o.detune.value * 100) / 100);
+      expect(detunes).toEqual([-9, -3, 3, 9]);
+    });
+
+    it('pans every non-centre oscillator through its own panner, matching the detune spread', () => {
+      setUnisonEnabled(true);
+      setUnisonVoices(3);
+      setUnisonSpread(0.5);
+      startVoice('a', 440);
+      const [left, center, right] = audio.voices.get('a').oscs;
+      // Centre oscillator (t=0): straight to the shared gain node.
+      expect(center.connections).toEqual([audio.voices.get('a').gainNode]);
+      // Outer oscillators: routed through a panner first, not directly.
+      expect(left.connections).toHaveLength(1);
+      expect(left.connections[0]).not.toBe(audio.voices.get('a').gainNode);
+      expect(left.connections[0].pan.value).toBeCloseTo(-0.5);
+      expect(right.connections[0].pan.value).toBeCloseTo(0.5);
+    });
+
+    it('divides peak gain by voice count, so unison changes width and timbre, not loudness', () => {
+      startVoice('quiet', 440); // unison off: 1 voice
+      const soloPeak = audio.voices.get('quiet').gainNode.gain.calls
+        .find(c => c.method === 'linearRampToValueAtTime').value;
+
+      setUnisonEnabled(true);
+      setUnisonVoices(3);
+      startVoice('thick', 440); // unison on: 3 voices
+      const unisonPeak = audio.voices.get('thick').gainNode.gain.calls
+        .find(c => c.method === 'linearRampToValueAtTime').value;
+
+      expect(unisonPeak).toBeCloseTo(soloPeak / 3);
+    });
+
+    it('applies the current waveform to every oscillator in the stack', () => {
+      setUnisonEnabled(true);
+      setWaveType('sawtooth');
+      startVoice('a', 440);
+      audio.voices.get('a').oscs.forEach(o => expect(o.type).toBe('sawtooth'));
+    });
+
+    it('setWaveType retunes every oscillator in an already-sounding unison voice', () => {
+      setUnisonEnabled(true);
+      startVoice('a', 440);
+      setWaveType('square');
+      audio.voices.get('a').oscs.forEach(o => expect(o.type).toBe('square'));
+    });
+
+    it('stopVoice ramps and stops every oscillator in the stack', () => {
+      setUnisonEnabled(true);
+      startVoice('a', 440);
+      const oscs = audio.voices.get('a').oscs;
+      const stopSpies = oscs.map(o => vi.spyOn(o, 'stop'));
+      stopVoice('a');
+      stopSpies.forEach(spy => expect(spy).toHaveBeenCalled());
+    });
+
+    it('stopVoice glide-out ramps every oscillator toward the same target frequency', () => {
+      setUnisonEnabled(true);
+      startVoice('a', 440);
+      const oscs = audio.voices.get('a').oscs; // captured before stopVoice deletes the entry
+      stopVoice('a', 550);
+      oscs.forEach(o => {
+        const last = o.frequency.calls[o.frequency.calls.length - 1];
+        expect(last).toEqual({ method: 'linearRampToValueAtTime', value: 550, time: audio.GLIDE_TIME });
+      });
+    });
+
+    it('glideVoice ramps every oscillator in the stack to the new frequency', () => {
+      setUnisonEnabled(true);
+      startVoice('old', 440);
+      const oscs = audio.voices.get('old').oscs;
+      glideVoice('old', 'new', 880);
+      oscs.forEach(o => {
+        const last = o.frequency.calls[o.frequency.calls.length - 1];
+        expect(last).toEqual({ method: 'linearRampToValueAtTime', value: 880, time: audio.GLIDE_TIME });
+      });
+      expect(audio.voices.get('new').oscs).toBe(oscs);
+    });
   });
 
   describe('envelope (ADSR)', () => {

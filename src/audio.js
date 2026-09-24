@@ -8,6 +8,15 @@ export const audio = {
   FREQ_C4: 261.63,
   REVERB_DECAY: 2.2,
   currentWaveType: 'sine',
+  // Off by default, matching Filter/Tremolo — an opt-in thickening effect,
+  // not a change to the base sound. When on, each voice is UNISON_VOICES
+  // oscillators instead of one, detuned and panned symmetrically around
+  // the held pitch (see startVoice) — the "layers copies for a wider,
+  // thicker sound" effect the HiChord manual calls Chorus/Stereo.
+  unisonEnabled: false,
+  UNISON_VOICES: 3,
+  UNISON_DETUNE: 12,
+  UNISON_SPREAD: 0.6,
   glideEnabled: false,
   GLIDE_TIME: 0.12,
   // Basic ADSR — always active (not an optional effect, so no *Enabled
@@ -58,29 +67,68 @@ export function startVoice(id, freq, glideFromFreq) {
   init();
   if (audio.voices.has(id)) return;
 
-  const osc = audio.ctx.createOscillator();
+  // Unison count/detune/spread are read once, at voice creation — like
+  // GLIDE_TIME and the envelope sliders, a change only affects voices
+  // started after it, not ones already sounding (see README). Unlike a
+  // plain parameter tweak, adding or removing oscillators from a voice
+  // that already has a scheduled envelope isn't something that can be done
+  // cleanly mid-flight, so there's no live-retune path here the way
+  // setWaveType has one.
+  const voiceCount = audio.unisonEnabled ? audio.UNISON_VOICES : 1;
   const gainNode = audio.ctx.createGain();
-
-  osc.type = audio.currentWaveType;
   const now = audio.ctx.currentTime;
-  if (glideFromFreq != null) {
-    osc.frequency.setValueAtTime(glideFromFreq, now);
-    osc.frequency.linearRampToValueAtTime(freq, now + audio.GLIDE_TIME);
-  } else {
-    osc.frequency.setValueAtTime(freq, now);
+  const oscs = [];
+
+  for (let i = 0; i < voiceCount; i++) {
+    // t sweeps -1..1 evenly across the voice count (0 when there's only
+    // one). An odd count therefore always lands one oscillator dead centre
+    // (t=0 -> no detune, no pan) flanked by symmetric detuned/panned pairs
+    // — the same "anchor plus wings" shape true-unison patches use, so the
+    // pitch stays precise even as the spread gets wide. An even count has
+    // no anchor, just N evenly spread voices.
+    const t = voiceCount === 1 ? 0 : (i / (voiceCount - 1)) * 2 - 1;
+    const osc = audio.ctx.createOscillator();
+    osc.type = audio.currentWaveType;
+    osc.detune.value = t * audio.UNISON_DETUNE;
+    if (glideFromFreq != null) {
+      osc.frequency.setValueAtTime(glideFromFreq, now);
+      osc.frequency.linearRampToValueAtTime(freq, now + audio.GLIDE_TIME);
+    } else {
+      osc.frequency.setValueAtTime(freq, now);
+    }
+
+    const pan = t * audio.UNISON_SPREAD;
+    if (pan !== 0) {
+      const panner = audio.ctx.createStereoPanner();
+      panner.pan.value = pan;
+      osc.connect(panner);
+      panner.connect(gainNode);
+    } else {
+      osc.connect(gainNode);
+    }
+    osc.start();
+    oscs.push(osc);
   }
 
-  const PEAK_GAIN = 0.15;
+  // Divided by voiceCount so N detuned oscillators summing into the same
+  // envelope land at the same total peak a single oscillator would have —
+  // unison changes the timbre and width of a voice, not its loudness, and
+  // a chord that already stacks several voices (plus Bass mode) can't
+  // afford unison multiplying each one's amplitude on top of that.
+  const PEAK_GAIN = 0.15 / voiceCount;
   const sustainLevel = PEAK_GAIN * audio.ENVELOPE_SUSTAIN;
   gainNode.gain.setValueAtTime(0, now);
   gainNode.gain.linearRampToValueAtTime(PEAK_GAIN, now + audio.ENVELOPE_ATTACK);
   gainNode.gain.linearRampToValueAtTime(sustainLevel, now + audio.ENVELOPE_ATTACK + audio.ENVELOPE_DECAY);
 
-  osc.connect(gainNode);
   gainNode.connect(effects.filterNode);
-  osc.start();
 
-  audio.voices.set(id, { osc, gainNode });
+  // `osc` aliases oscs[0] — with unison off (voiceCount 1, the default)
+  // that's the voice's only oscillator, so every existing caller reading
+  // voice.osc keeps working unchanged; callers that need to affect every
+  // oscillator in a unison stack (stopVoice, glideVoice, setWaveType) use
+  // `oscs` instead.
+  audio.voices.set(id, { osc: oscs[0], oscs, gainNode });
 }
 
 // `glideToFreq`, if given, is an edges-glide target pitch: the oscillator
@@ -91,7 +139,7 @@ export function startVoice(id, freq, glideFromFreq) {
 export function stopVoice(id, glideToFreq) {
   const voice = audio.voices.get(id);
   if (!voice) return;
-  const { osc, gainNode } = voice;
+  const { oscs, gainNode } = voice;
   const now = audio.ctx.currentTime;
   const duration = glideToFreq != null ? Math.max(audio.ENVELOPE_RELEASE, audio.GLIDE_TIME) : audio.ENVELOPE_RELEASE;
 
@@ -99,13 +147,18 @@ export function stopVoice(id, glideToFreq) {
   gainNode.gain.setValueAtTime(gainNode.gain.value, now);
   gainNode.gain.linearRampToValueAtTime(0, now + duration);
 
-  if (glideToFreq != null) {
-    osc.frequency.cancelScheduledValues(now);
-    osc.frequency.setValueAtTime(osc.frequency.value, now);
-    osc.frequency.linearRampToValueAtTime(glideToFreq, now + duration);
-  }
-
-  osc.stop(now + duration + 0.02);
+  // Every oscillator in a unison stack keeps its own fixed detune offset
+  // for the voice's whole life (set once in startVoice), so ramping each
+  // one's .frequency to the same glideToFreq is all that's needed to slide
+  // the whole stack together, spread intact.
+  oscs.forEach(osc => {
+    if (glideToFreq != null) {
+      osc.frequency.cancelScheduledValues(now);
+      osc.frequency.setValueAtTime(osc.frequency.value, now);
+      osc.frequency.linearRampToValueAtTime(glideToFreq, now + duration);
+    }
+    osc.stop(now + duration + 0.02);
+  });
 
   audio.voices.delete(id);
 }
@@ -113,8 +166,26 @@ export function stopVoice(id, glideToFreq) {
 export function setWaveType(type) {
   audio.currentWaveType = type;
   // Retune sustaining voices too, so the change is audible while a chord
-  // is still held rather than only on the next note.
-  audio.voices.forEach(({ osc }) => { osc.type = type; });
+  // is still held rather than only on the next note. Waveform is safe to
+  // change live on every oscillator in a unison stack (unlike the voice
+  // count/detune/spread that produced the stack in the first place).
+  audio.voices.forEach(({ oscs }) => { oscs.forEach(osc => { osc.type = type; }); });
+}
+
+export function setUnisonEnabled(enabled) {
+  audio.unisonEnabled = enabled;
+}
+
+export function setUnisonVoices(count) {
+  audio.UNISON_VOICES = count;
+}
+
+export function setUnisonDetune(cents) {
+  audio.UNISON_DETUNE = cents;
+}
+
+export function setUnisonSpread(spread) {
+  audio.UNISON_SPREAD = spread;
 }
 
 export function setGlideEnabled(enabled) {
@@ -161,11 +232,16 @@ export function glideVoice(oldId, newId, newFreq) {
     startVoice(newId, newFreq);
     return;
   }
-  const { osc } = voice;
+  const { oscs } = voice;
   const now = audio.ctx.currentTime;
-  osc.frequency.cancelScheduledValues(now);
-  osc.frequency.setValueAtTime(osc.frequency.value, now);
-  osc.frequency.linearRampToValueAtTime(newFreq, now + audio.GLIDE_TIME);
+  // Same reasoning as stopVoice's glide-out: each oscillator keeps its own
+  // fixed detune, so ramping every one of them to the same newFreq slides
+  // the whole unison stack together.
+  oscs.forEach(osc => {
+    osc.frequency.cancelScheduledValues(now);
+    osc.frequency.setValueAtTime(osc.frequency.value, now);
+    osc.frequency.linearRampToValueAtTime(newFreq, now + audio.GLIDE_TIME);
+  });
 
   audio.voices.delete(oldId);
   audio.voices.set(newId, voice);

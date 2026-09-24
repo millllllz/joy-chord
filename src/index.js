@@ -1,6 +1,10 @@
 import {
   init as initAudio,
   audio,
+  setUnisonEnabled,
+  setUnisonVoices,
+  setUnisonDetune,
+  setUnisonSpread,
   setGlideEnabled,
   setGlideTime,
   setEnvelopeAttack,
@@ -225,6 +229,39 @@ wireFxDialog({
       value: () => audio.GLIDE_TIME,
       format: (v) => `${Math.round(v * 1000)}ms`,
       onInput: setGlideTime,
+    },
+  ],
+});
+
+// Also not an effects-node insert (see the Glide comment above) — each
+// voice's own oscillator count/detune/pan, set once at startVoice, not a
+// node in the shared signal graph.
+wireFxDialog({
+  toggleBtn: document.getElementById('unison-toggle'),
+  dialog: document.getElementById('unison-dialog'),
+  isEnabled: () => audio.unisonEnabled,
+  setEnabled: setUnisonEnabled,
+  sliders: [
+    {
+      slider: document.getElementById('unison-voices-slider'),
+      valueEl: document.getElementById('unison-voices-value'),
+      value: () => audio.UNISON_VOICES,
+      format: (v) => `${Math.round(v)}`,
+      onInput: (v) => setUnisonVoices(Math.round(v)),
+    },
+    {
+      slider: document.getElementById('unison-detune-slider'),
+      valueEl: document.getElementById('unison-detune-value'),
+      value: () => audio.UNISON_DETUNE,
+      format: (v) => `${Math.round(v)}c`,
+      onInput: setUnisonDetune,
+    },
+    {
+      slider: document.getElementById('unison-spread-slider'),
+      valueEl: document.getElementById('unison-spread-value'),
+      value: () => audio.UNISON_SPREAD,
+      format: (v) => `${Math.round(v * 100)}%`,
+      onInput: setUnisonSpread,
     },
   ],
 });
