@@ -28,6 +28,7 @@ import {
   setFilterResonance,
   setTremoloRate,
   setTremoloDepth,
+  setVocoderSendLevel,
 } from './effects.js';
 import { arpeggiator, ORDER_NAMES, setArpEnabled, setArpOrder, setArpRate } from './arpeggiator.js';
 import { setKeyRoot, setModifierSet, setOctave } from './degree-joystick.js';
@@ -93,6 +94,12 @@ const SCHEMA = {
   tremolo: { read: () => effects.tremoloEnabled, write: setTremoloEnabled, valid: boolean },
   tremoloRate: { read: () => effects.TREMOLO_RATE, write: setTremoloRate, valid: number(0.5, 12) },
   tremoloDepth: { read: () => effects.TREMOLO_DEPTH, write: setTremoloDepth, valid: number(0, 1) },
+
+  // Deliberately no `vocoder` enabled flag here, unlike every other effect —
+  // restoring it as "on" would mean silently re-requesting mic access on
+  // every page load with no fresh user gesture behind it. The mix level is
+  // just a number preference, no privacy implication, so that alone persists.
+  vocoderMix: { read: () => effects.VOCODER_SEND_LEVEL, write: setVocoderSendLevel, valid: number(0, 1) },
 
   arp: { read: () => arpeggiator.enabled, write: setArpEnabled, valid: boolean },
   arpOrder: { read: () => arpeggiator.order, write: setArpOrder, valid: oneOf(ORDER_NAMES) },

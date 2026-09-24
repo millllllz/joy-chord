@@ -27,6 +27,19 @@ export const effects = {
   TREMOLO_RATE: 5,
   TREMOLO_DEPTH: 0.5,
   FX_RAMP: 0.05,
+
+  // Vocoder: unlike every other effect here, this one needs a second live
+  // input (the mic) and a filter-bank graph built lazily once permission is
+  // granted — that whole lifecycle lives in vocoder.js, not here. This
+  // module only owns the two audio-graph buses vocoder.js plugs into: a
+  // carrier tap (the instrument side, always connected — see init below) and
+  // a send whose gain ramps on/off exactly like delaySend/reverbSend, so
+  // vocoder.js's mic/permission logic never has to touch the graph directly.
+  vocoderCarrierBus: null,
+  vocoderOutputBus: null,
+  vocoderSend: null,
+  vocoderEnabled: false,
+  VOCODER_SEND_LEVEL: 0.9,
 };
 
 // Unlike delay/reverb (parallel sends with an untouched dry path underneath),
@@ -102,6 +115,19 @@ export function init() {
   effects.tremoloGain.connect(audio.ctx.destination);
   effects.tremoloGain.connect(effects.delaySend);
   effects.tremoloGain.connect(effects.reverbSend);
+
+  // vocoderCarrierBus is always connected (a bare gain node costs nothing
+  // until vocoder.js's filter bank exists downstream of it, which only
+  // happens once mic access is first granted) — so turning Vocoder on/off
+  // is purely setVocoderSendEnabled's gain ramp below, never a graph change.
+  effects.vocoderCarrierBus = audio.ctx.createGain();
+  effects.tremoloGain.connect(effects.vocoderCarrierBus);
+
+  effects.vocoderOutputBus = audio.ctx.createGain();
+  effects.vocoderSend = audio.ctx.createGain();
+  effects.vocoderSend.gain.value = 0; // starts off — see vocoder.js: never auto-restored, mic access always needs a fresh tap
+  effects.vocoderOutputBus.connect(effects.vocoderSend);
+  effects.vocoderSend.connect(audio.ctx.destination);
 }
 
 export function setFilterEnabled(enabled) {
@@ -209,4 +235,23 @@ export function setReverbDecay(seconds) {
 export function setReverbSendLevel(level) {
   effects.REVERB_SEND_LEVEL = level;
   if (effects.reverbSend && effects.reverbEnabled) effects.reverbSend.gain.value = level;
+}
+
+// Purely the audio-graph half of "vocoder on/off" — ramping vocoderSend's
+// gain exactly like every other send here. Called by vocoder.js only after
+// it's actually got a live mic tap wired into vocoderOutputBus (on) or torn
+// one down (off); this function has no opinion on mic/permission state.
+export function setVocoderSendEnabled(enabled) {
+  effects.vocoderEnabled = enabled;
+  if (audio.ctx) {
+    const now = audio.ctx.currentTime;
+    effects.vocoderSend.gain.cancelScheduledValues(now);
+    effects.vocoderSend.gain.setValueAtTime(effects.vocoderSend.gain.value, now);
+    effects.vocoderSend.gain.linearRampToValueAtTime(enabled ? effects.VOCODER_SEND_LEVEL : 0, now + effects.FX_RAMP);
+  }
+}
+
+export function setVocoderSendLevel(level) {
+  effects.VOCODER_SEND_LEVEL = level;
+  if (effects.vocoderSend && effects.vocoderEnabled) effects.vocoderSend.gain.value = level;
 }

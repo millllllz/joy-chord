@@ -53,6 +53,16 @@ describe('persistence module', () => {
       expect(applied).toHaveLength(2);
     });
 
+    // Only the mix level persists for Vocoder, never an enabled flag — see
+    // the comment on the vocoderMix schema entry (restoring "on" would mean
+    // silently re-requesting mic access with no fresh user gesture).
+    it('restores the vocoder mix level but has no enabled flag to restore', () => {
+      const applied = applySettings({ vocoderMix: 0.6 });
+      expect(effects.VOCODER_SEND_LEVEL).toBe(0.6);
+      expect(applied).toEqual(['vocoderMix']);
+      expect(Object.keys(collectSettings())).not.toContain('vocoder');
+    });
+
     it('ignores keys that are absent', () => {
       applySettings({ keyRoot: 4 });
       expect(audio.currentWaveType).toBe('sine');

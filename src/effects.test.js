@@ -15,6 +15,8 @@ import {
   setTremoloEnabled,
   setTremoloRate,
   setTremoloDepth,
+  setVocoderSendEnabled,
+  setVocoderSendLevel,
 } from './effects.js';
 import { audio, startVoice } from './audio.js';
 
@@ -33,6 +35,10 @@ describe('effects module', () => {
     effects.tremoloGain = null;
     effects.tremoloLFO = null;
     effects.tremoloDepthGain = null;
+    effects.vocoderEnabled = false;
+    effects.vocoderCarrierBus = null;
+    effects.vocoderOutputBus = null;
+    effects.vocoderSend = null;
     audio.ctx = null;
     audio.voices = new Map();
   });
@@ -48,6 +54,7 @@ describe('effects module', () => {
     expect(effects.TREMOLO_RATE).toBe(5);
     expect(effects.TREMOLO_DEPTH).toBe(0.5);
     expect(effects.FX_RAMP).toBe(0.05);
+    expect(effects.VOCODER_SEND_LEVEL).toBe(0.9);
   });
 
   it('tracks delay enabled state', () => {
@@ -227,5 +234,49 @@ describe('effects module', () => {
     expect(effects.REVERB_DECAY).toBe(4);
     expect(audio.REVERB_DECAY).toBe(4);
     expect(effects.convolver.buffer).not.toBe(before);
+  });
+
+  describe('vocoder buses', () => {
+    it('taps the carrier from the same post-filter/tremolo signal every other effect uses', () => {
+      init();
+      expect(effects.tremoloGain.connections).toContain(effects.vocoderCarrierBus);
+    });
+
+    it('starts silent and routes its output bus through the send to destination', () => {
+      init();
+      expect(effects.vocoderSend.gain.value).toBe(0);
+      expect(effects.vocoderOutputBus.connections).toContain(effects.vocoderSend);
+      expect(effects.vocoderSend.connections).toContain(audio.ctx.destination);
+    });
+
+    it('ramps the send gain up on enable and back to 0 on disable', () => {
+      init();
+      setVocoderSendEnabled(true);
+      expect(effects.vocoderEnabled).toBe(true);
+      expect(effects.vocoderSend.gain.value).toBe(0.9);
+      setVocoderSendEnabled(false);
+      expect(effects.vocoderEnabled).toBe(false);
+      expect(effects.vocoderSend.gain.value).toBe(0);
+    });
+
+    it('pushes the mix level live onto the send once initialized and enabled', () => {
+      init();
+      setVocoderSendEnabled(true);
+      setVocoderSendLevel(0.4);
+      expect(effects.VOCODER_SEND_LEVEL).toBe(0.4);
+      expect(effects.vocoderSend.gain.value).toBe(0.4);
+    });
+
+    it('does not push the mix level live while disabled', () => {
+      init();
+      setVocoderSendLevel(0.4);
+      expect(effects.VOCODER_SEND_LEVEL).toBe(0.4);
+      expect(effects.vocoderSend.gain.value).toBe(0);
+    });
+
+    it('setVocoderSendLevel updates state even before init() has run', () => {
+      setVocoderSendLevel(0.7);
+      expect(effects.VOCODER_SEND_LEVEL).toBe(0.7);
+    });
   });
 });

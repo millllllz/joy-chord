@@ -552,6 +552,11 @@
     accent-color: var(--accent-active);
     cursor: pointer;
   }
+  .fx-dialog-note {
+    margin: -8px 0 0;
+    font-size: 11px;
+    color: var(--muted);
+  }
   .fx-dialog-param {
     display: flex;
     flex-direction: column;

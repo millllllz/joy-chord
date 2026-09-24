@@ -28,7 +28,9 @@ import {
   setFilterResonance,
   setTremoloRate,
   setTremoloDepth,
+  setVocoderSendLevel,
 } from './effects.js';
+import { setVocoderEnabled } from './vocoder.js';
 import { init as initSettings, settings, setHoldEnabled, setBassEnabled } from './settings.js';
 import { setWaveType } from './audio.js';
 import { loadSettings, scheduleSave, flushSave } from './persistence.js';
@@ -91,9 +93,16 @@ function wireFxDialog({ toggleBtn, dialog, isEnabled, setEnabled, sliders }) {
     toggleBtn.addEventListener('pointerup', () => {
       cancelPress();
       if (longPressed) return;
-      setEnabled(!isEnabled());
-      syncToggleBtn();
-      scheduleSave();
+      // Every setEnabled here is synchronous except Vocoder's (a mic
+      // permission request) — Promise.resolve(...).then(...) runs the sync
+      // ones' sync/save on the very next microtask (imperceptible) and lets
+      // the async one wait for the real outcome before the button's visual
+      // state and the persisted value catch up, rather than optimistically
+      // showing "on" before permission is actually granted.
+      Promise.resolve(setEnabled(!isEnabled())).then(() => {
+        syncToggleBtn();
+        scheduleSave();
+      });
     });
     toggleBtn.addEventListener('pointercancel', cancelPress);
     toggleBtn.addEventListener('pointerleave', cancelPress);
@@ -262,6 +271,25 @@ wireFxDialog({
       value: () => audio.UNISON_SPREAD,
       format: (v) => `${Math.round(v * 100)}%`,
       onInput: setUnisonSpread,
+    },
+  ],
+});
+
+// setEnabled here is async (mic permission) — see the Promise.resolve(...)
+// wrapping in wireFxDialog above, which is what makes an async setEnabled
+// safe to mix in with every other (synchronous) effect on this same helper.
+wireFxDialog({
+  toggleBtn: document.getElementById('vocoder-toggle'),
+  dialog: document.getElementById('vocoder-dialog'),
+  isEnabled: () => effects.vocoderEnabled,
+  setEnabled: setVocoderEnabled,
+  sliders: [
+    {
+      slider: document.getElementById('vocoder-mix-slider'),
+      valueEl: document.getElementById('vocoder-mix-value'),
+      value: () => effects.VOCODER_SEND_LEVEL,
+      format: (v) => `${Math.round(v * 100)}%`,
+      onInput: setVocoderSendLevel,
     },
   ],
 });

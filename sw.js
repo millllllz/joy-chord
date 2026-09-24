@@ -17,6 +17,7 @@ const ASSETS = [
   './src/modifier-joystick.js',
   './src/persistence.js',
   './src/settings.js',
+  './src/vocoder.js',
   './src/wedge-geometry.js',
   './icons/icon.svg',
   './icons/icon-192.png',

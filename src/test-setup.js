@@ -33,6 +33,14 @@ global.AudioContext = class MockAudioContext {
     return new MockAudioNode();
   }
 
+  createWaveShaper() {
+    return new MockAudioNode();
+  }
+
+  createMediaStreamSource() {
+    return new MockAudioNode();
+  }
+
   createBuffer(channels, length, sampleRate) {
     const channelData = [];
     for (let i = 0; i < channels; i++) {
@@ -68,6 +76,10 @@ class MockAudioNode {
   connect(dest) {
     this.connections.push(dest);
     return dest;
+  }
+
+  disconnect(dest) {
+    this.connections = dest ? this.connections.filter(c => c !== dest) : [];
   }
 
   start() {}
@@ -159,4 +171,21 @@ global.window = {
   AudioContext: global.AudioContext,
   addEventListener: vi.fn(),
   navigator: { userAgent: 'test' },
+};
+
+// vocoder.js reads the bare global `navigator` (matching how browsers
+// actually expose it), not window.navigator above — jsdom provides a real
+// Navigator object for that already, it just has no mediaDevices, since
+// jsdom doesn't implement media capture. Tests override getUserMedia's
+// return value per-case; this default grants a harmless fake stream so
+// tests that don't care about mic behavior aren't forced to mock it too.
+global.navigator.mediaDevices = {
+  // A real MediaStream's tracks are stable objects, not regenerated on every
+  // getTracks() call — the closure here mirrors that, so a test can grab a
+  // track's stop() spy before disabling and still see the same object the
+  // implementation calls stop() on.
+  getUserMedia: vi.fn(() => {
+    const track = { stop: vi.fn() };
+    return Promise.resolve({ getTracks: () => [track] });
+  }),
 };
