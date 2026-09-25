@@ -36,8 +36,18 @@ const MODIFIER_ANGLE_STEP = 360 / MODIFIER_DIRECTIONS.length;
 // same real-time toggle (see chords.js), so it reuses this exact table too;
 // Chromatic has no toggle direction at all — every one of its 8 is a fixed
 // named chord, see MODIFIER_CHORD_SETS.
-const QUALITY_WEDGE_DEFAULTS = {
+export const QUALITY_WEDGE_DEFAULTS = {
   up: 'Maj/Min', right: 'Maj7/min7', 'down-left': '6th/Sus2', left: 'Dim/Min',
+};
+
+// Also read by keyboard-view.js, to lay out and label the on-screen
+// keyboard's modifier-key cluster identically to this joystick's own
+// keydown handling below — one source of truth for which physical key does
+// what, rather than a second hardcoded copy that could drift out of sync.
+export const MODIFIER_KEY_TO_DIR = {
+  // Interleaved clockwise from top: odds (jkl;) home row, evens (iop[) top row
+  j: 'up',         i: 'up-right',   k: 'right',      o: 'down-right',
+  l: 'down',       p: 'down-left',  ';': 'left',     '[': 'up-left',
 };
 const joyLabelEls = {}; // direction -> label <text> element, all 8
 
@@ -137,6 +147,21 @@ function renderSingleLineLabel(labelEl, text) {
   labelEl.style.fontSize = text.length > 7 ? '6.5px' : text.length > 5 ? '7.5px' : '';
 }
 
+// What a direction's label reads as under a given modifier set, as one flat
+// string — the same text renderWedgeLabels below resolves per wedge, minus
+// its live per-quality dimming (which needs two separate tspans, not a
+// plain string). Used by keyboard-view.js to label its modifier-key
+// cluster: those keycaps are too small for a two-line split label anyway,
+// so showing the flat default (e.g. "Maj/Min") rather than resolving it
+// against whatever's currently held is the right simplification there, not
+// a corner cut.
+export function fixedDirectionLabel(set, dir) {
+  if ((set === 'default' && dir in QUALITY_WEDGE_DEFAULTS) || (set === 'extended' && dir === 'up')) {
+    return QUALITY_WEDGE_DEFAULTS[dir];
+  }
+  return (set === 'default' ? chords.CHORD_LABELS[dir] : MODIFIER_CHORD_SETS[set][dir]?.label) ?? '';
+}
+
 // Repaints every one of the 8 wedge labels for whatever modifier set is
 // currently selected (settings.modifierSet) and, where it matters, the
 // quality of whatever's currently held. Called on init, on every press/
@@ -154,8 +179,7 @@ export function renderWedgeLabels() {
       renderJoyLabel(el, QUALITY_WEDGE_DEFAULTS[dir], quality ? qualityLabel(dir, quality) : null);
       return;
     }
-    const fixedLabel = set === 'default' ? chords.CHORD_LABELS[dir] : MODIFIER_CHORD_SETS[set][dir]?.label;
-    renderSingleLineLabel(el, fixedLabel ?? '');
+    renderSingleLineLabel(el, fixedDirectionLabel(set, dir));
   });
 }
 
@@ -181,11 +205,7 @@ export function init() {
   });
   renderWedgeLabels();
 
-  const modifierKeyToDir = {
-    // Interleaved clockwise from top: odds (jkl;) home row, evens (iop[) top row
-    j: 'up',         i: 'up-right',   k: 'right',      o: 'down-right',
-    l: 'down',       p: 'down-left',  ';': 'left',     '[': 'up-left',
-  };
+  const modifierKeyToDir = MODIFIER_KEY_TO_DIR;
 
   // Mouse interaction
   joyWedges.forEach(wedge => {

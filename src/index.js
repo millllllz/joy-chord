@@ -35,7 +35,8 @@ import { init as initSettings, settings, setHoldEnabled, setBassEnabled } from '
 import { setWaveType } from './audio.js';
 import { loadSettings, scheduleSave, flushSave } from './persistence.js';
 import { init as initDegreeJoystick, releaseAllHeld, syncArpToHeldChord, setKeyRoot, setModifierSet, setOctave } from './degree-joystick.js';
-import { init as initModifierJoystick, setJoyDirection } from './modifier-joystick.js';
+import { init as initModifierJoystick, setJoyDirection, renderWedgeLabels } from './modifier-joystick.js';
+import { init as initKeyboardView, refreshKeyboardViewLabels } from './keyboard-view.js';
 import { init as initDebug, debugLog } from './debug.js';
 import { chords } from './chords.js';
 import { init as initFullscreen } from './fullscreen.js';
@@ -442,6 +443,10 @@ initDebug();
 initSettings();
 initDegreeJoystick();
 initModifierJoystick();
+// After both of the above — keyboard-view.js reads their held/direction
+// state on every keydown/keyup (see its own comment), so its listeners
+// have to be registered, and therefore fire, after theirs.
+initKeyboardView();
 
 // The key and wave dropdowns: settings.js populates their options and sets
 // the current value, index.js wires what they do — same split as every other
@@ -467,6 +472,11 @@ waveSelectEl.addEventListener('change', () => {
 const modifierSetSelectEl = document.getElementById('modifier-set-select');
 modifierSetSelectEl.addEventListener('change', () => {
   setModifierSet(modifierSetSelectEl.value);
+  // The on-screen keyboard's modifier-key labels are the one thing keyboard-
+  // view.js doesn't already pick up live (see its own comment on why) — this
+  // is the one place that changes them, so it's the one place that has to
+  // ask it to refresh.
+  refreshKeyboardViewLabels();
   scheduleSave();
 });
 
@@ -486,11 +496,15 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') flushSave();
 });
 
-// Bind-key hint labels on the wedges start hidden — only a device actually
-// driven by a keyboard should see them. The first keydown matching one of
-// the bound play/modifier keys reveals them; a touchstart hides them again,
-// since a hybrid device (e.g. a touchscreen laptop) can switch modality
-// mid-session.
+// body.keyboard-active is the single switch for "which input am I actually
+// using right now": it reveals the wedges' own bind-key hints, and (see
+// style.css) swaps each joystick SVG for keyboard-view.js's on-screen
+// keyboard of the same shortcuts, laid out in real QWERTY positions. The
+// first keydown matching one of the bound play/modifier keys turns it on;
+// a mousedown or touchstart turns it back off, since a hybrid device (e.g.
+// a touchscreen laptop, or a keyboard plugged into a touch tablet) can
+// switch modality mid-session and the UI should follow whichever one was
+// actually just used, not stay stuck on the first.
 const BIND_KEYS = new Set([
   ...chords.DEGREES.map(d => d.bindKey),
   'j', 'i', 'k', 'o', 'l', 'p', ';', '[',
@@ -498,7 +512,21 @@ const BIND_KEYS = new Set([
 window.addEventListener('keydown', (e) => {
   if (BIND_KEYS.has(e.key.toLowerCase())) document.body.classList.add('keyboard-active');
 });
-window.addEventListener('touchstart', () => document.body.classList.remove('keyboard-active'), { passive: true });
+// A press/release while in keyboard mode calls renderWedgeLabels() with the
+// modifier joystick's <svg> sitting at display: none (see style.css) —
+// getBBox() returns a zero-size box for anything inside a display: none
+// element, which silently corrupts the split two-line wedge labels'
+// (Maj/Min, Maj7/min7, ...) getBBox()-measured positioning, and it stays
+// corrupted once the svg is visible again, since nothing else re-renders
+// it. Re-running it right as the svg becomes visible again — geometry is
+// measurable by then — is what actually fixes it, not just the CSS swap.
+function exitKeyboardMode() {
+  if (!document.body.classList.contains('keyboard-active')) return;
+  document.body.classList.remove('keyboard-active');
+  renderWedgeLabels();
+}
+window.addEventListener('touchstart', exitKeyboardMode, { passive: true });
+window.addEventListener('mousedown', exitKeyboardMode);
 initFullscreen();
 
 // Register PWA service worker

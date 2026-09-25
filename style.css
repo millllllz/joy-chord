@@ -121,7 +121,11 @@
     height: 100%;
     min-height: 0;
   }
-  .joystick {
+  /* .keyboard-view shares every one of these — it swaps into the exact same
+     flex slot as its joystick (see body.keyboard-active below), so it needs
+     the exact same sizing, not just a visually-similar approximation. */
+  .joystick,
+  .keyboard-view {
     flex: 1 1 0;
     /* The same auto-minimum trap .synth hit above: a flex item's default
        minimum is content-based, which would floor each stick and push the
@@ -180,7 +184,8 @@
     .joysticks {
       flex-direction: row;
     }
-    .joystick {
+    .joystick,
+    .keyboard-view {
       /* Main axis is horizontal here, so the equal share flex: 1 1 0 hands
          out is width, and min-width is the auto-minimum to neutralise.
          Height is the cross axis: a replaced element won't stretch on its
@@ -381,6 +386,80 @@
     fill: var(--muted);
     text-anchor: middle;
     dominant-baseline: middle;
+  }
+
+  /* keyboard-view.js's on-screen keyboards: hidden (and each joystick
+     shown) by default, swapped the moment body.keyboard-active is set —
+     see index.js. Sizing itself lives on the shared .joystick,
+     .keyboard-view rules above; this is purely which one is visible. */
+  .keyboard-view {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    /* Responsive key size: the joystick it swaps places with fills its
+       whole flex slot (a circle sized off both width and height — see
+       .joystick above), so this scales off both axes too rather than only
+       vw, or it reads as a small island adrift in the slot's empty space.
+       Referenced by .keyboard-row's own margin-left below, so the stagger
+       scales together with the keys instead of drifting apart from them. */
+    --key-size: clamp(30px, min(11vw, 13vh), 64px);
+    --key-gap: clamp(4px, min(2vw, 2.5vh), 9px);
+  }
+  body.keyboard-active .keyboard-view {
+    display: flex;
+  }
+  body.keyboard-active .joystick {
+    display: none;
+  }
+  .keyboard-row {
+    display: flex;
+    gap: var(--key-gap);
+  }
+  .key-cap {
+    width: var(--key-size);
+    height: var(--key-size);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border-radius: 6px;
+    background: var(--wedge-fill);
+    border: 1px solid var(--panel-hover);
+    /* Purely a live visualization of what's currently sounding, not a
+       second clickable input surface — see keyboard-view.js. */
+    pointer-events: none;
+    transition: background 0.1s ease, border-color 0.1s ease;
+  }
+  .key-cap.active {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .key-letter {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .key-cap.active .key-letter {
+    color: var(--label-active);
+    opacity: 0.7;
+  }
+  .key-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--text);
+    text-align: center;
+    line-height: 1.1;
+    max-width: calc(var(--key-size) - 4px);
+    overflow: hidden;
+  }
+  .key-cap.active .key-label {
+    color: var(--label-active);
   }
 
   .key-select {
