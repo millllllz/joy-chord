@@ -41,10 +41,12 @@ import { init as initDebug, debugLog } from './debug.js';
 import { chords } from './chords.js';
 import { init as initFullscreen } from './fullscreen.js';
 import { arpeggiator, ORDER_NAMES, setArpEnabled, setArpOrder, setArpRate } from './arpeggiator.js';
+import { initMIDI } from './midi.js';
 
 // Initialize audio system
 initAudio();
 initEffects();
+initMIDI().catch(() => {}); // MIDI is optional; suppress errors on unsupported browsers
 
 // Restore saved settings before anything reads state to build the UI: every
 // control below initialises itself from the live state rather than from the
