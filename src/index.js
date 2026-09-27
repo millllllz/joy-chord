@@ -409,19 +409,12 @@ modifierSetSelectEl.addEventListener('change', () => {
   scheduleSave();
 });
 
-// The piano only labels Default's modifiers, so the set is fixed while it's
-// the active surface.
 const surfaceSelectEl = document.getElementById('surface-select');
-const syncSurfaceControls = () => {
-  surfaceSelectEl.value = settings.controlSurface;
-  modifierSetSelectEl.disabled = settings.controlSurface === 'piano';
-};
+surfaceSelectEl.value = settings.controlSurface;
 surfaceSelectEl.addEventListener('change', () => {
   setControlSurface(surfaceSelectEl.value);
-  syncSurfaceControls();
   scheduleSave();
 });
-syncSurfaceControls();
 
 // Same split again: the real setOctave lives in degree-joystick.js (it
 // re-voices a held chord).

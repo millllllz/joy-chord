@@ -1,4 +1,4 @@
-import { chords, getChordIntervals, resolvedChordName, resolvePianoModifier, INTERVAL_NAMES } from './chords.js';
+import { chords, getModifierChord, resolvedChordName, resolvePianoModifier, intervalName, INTERVAL_NAMES } from './chords.js';
 import { settings } from './settings.js';
 import { degreeJoystick, pressDegree, releaseAllHeld, onChordChange } from './degree-joystick.js';
 import { setJoyDirection, renderWedgeLabels } from './modifier-joystick.js';
@@ -152,7 +152,9 @@ function currentMods() {
   return settings.holdEnabled ? new Set(piano.latched) : new Set(piano.modPointers.values());
 }
 
-const chordName = (root, dir) => resolvedChordName(settings.currentKeyRoot, root.d, dir, 'default');
+const chordName = (root, dir) => resolvedChordName(settings.currentKeyRoot, root.d, dir, settings.modifierSet);
+const chordTones = (root, dir) => getModifierChord(settings.modifierSet, root.d.quality, dir, root.d);
+const resolveMods = (root, held, last) => resolvePianoModifier(root.d, held, last, settings.modifierSet);
 
 function render() {
   if (!piano.el) return;
@@ -163,7 +165,7 @@ function render() {
 
   const root = heldRoot();
   const dir = degreeJoystick.currentDirection;
-  const tones = root ? getChordIntervals(root.d.quality, dir) : [];
+  const tones = root ? chordTones(root, dir) : [];
   const mods = currentMods();
 
   piano.keys.forEach(key => {
@@ -184,22 +186,25 @@ function render() {
       state = 'root';
     } else if (interval > 0 && interval < INTERVAL_NAMES.length) {
       const held = mods.has(interval);
-      const next = resolvePianoModifier(root.d.quality, held ? [...mods] : [...mods, interval], interval);
+      const next = resolveMods(root, held ? [...mods] : [...mods, interval], interval);
+      let spelledIn = tones;
       if (held) {
         main = chordName(root, dir);
         state = 'mod';
       } else if (next !== 'center' && next !== dir) {
         main = chordName(root, next);
         state = 'option';
+        spelledIn = chordTones(root, next);
       } else if (tones.includes(interval)) {
         state = 'tone';
       }
-      if (state) sub = INTERVAL_NAMES[interval];
+      if (state) sub = intervalName(interval, spelledIn);
     }
     key.mainEl.textContent = main;
     key.subEl.textContent = sub;
     key.el.dataset.state = state;
     key.el.classList.toggle('long', main.length > 5);
+    key.el.classList.toggle('longer', main.length > 8);
   });
 
   const rootKey = root && piano.keys.find(k => k.semitone === root.semitone);
@@ -208,12 +213,12 @@ function render() {
 
   piano.nameEl.textContent = root ? chordName(root, dir) : '';
   piano.formulaEl.textContent = root
-    ? tones.map(i => INTERVAL_NAMES[i]).join(' · ')
+    ? tones.map(i => intervalName(i, tones)).join(' · ')
     : 'Hold a degree, then add a lit key';
 }
 
 function applyMods(root) {
-  const dir = resolvePianoModifier(root.d.quality, [...currentMods()], piano.lastInterval);
+  const dir = resolveMods(root, [...currentMods()], piano.lastInterval);
   setJoyDirection(dir);
   render();
 }
@@ -263,7 +268,7 @@ function onPointerDown(e) {
         applyMods(root);
         return;
       }
-      if (resolvePianoModifier(root.d.quality, [...mods, interval], interval) !== 'center') {
+      if (resolveMods(root, [...mods, interval], interval) !== 'center') {
         if (settings.holdEnabled) piano.latched.add(interval);
         else piano.modPointers.set(e.pointerId, interval);
         piano.lastInterval = interval;

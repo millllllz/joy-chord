@@ -1,7 +1,7 @@
 import { stopVoice, noteFreq, reconcileVoices } from './audio.js';
 import { effects } from './effects.js';
 import { chords, getModifierChord, resolvedChordName } from './chords.js';
-import { settings, activeModifierSet } from './settings.js';
+import { settings } from './settings.js';
 import { renderWedgeLabels } from './modifier-joystick.js';
 import { arpeggiator, updateArpChord } from './arpeggiator.js';
 
@@ -270,7 +270,7 @@ function voicesForDegree(d, direction) {
     const bassSemitone = settings.currentKeyRoot + d.semitone - 24 + octaveShift;
     target.set(`${d.key}:bass:${bassSemitone}`, noteFreq(bassSemitone));
   }
-  getModifierChord(activeModifierSet(), d.quality, direction).forEach(interval => {
+  getModifierChord(settings.modifierSet, d.quality, direction, d).forEach(interval => {
     const semitone = settings.currentKeyRoot + d.semitone + interval + octaveShift;
     target.set(`${d.key}:${semitone}`, noteFreq(semitone));
   });
@@ -295,7 +295,7 @@ function noteFreqFromId(id) {
 function updateChordNameLabel() {
   const [heldKey] = degreeJoystick.heldDegrees.keys();
   const name = heldKey
-    ? resolvedChordName(settings.currentKeyRoot, degreeJoystick.degreeByKey.get(heldKey), degreeJoystick.currentDirection, activeModifierSet())
+    ? resolvedChordName(settings.currentKeyRoot, degreeJoystick.degreeByKey.get(heldKey), degreeJoystick.currentDirection, settings.modifierSet)
     : '';
   // Most names (root + maj7/m7/dim/aug/sus4/...) fit the circle at the
   // default 12px; a handful of rare quality+direction combos (e.g. a

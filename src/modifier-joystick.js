@@ -1,6 +1,6 @@
 import { degreeJoystick, setDirection } from './degree-joystick.js';
 import { wedgePath } from './wedge-geometry.js';
-import { chords, qualityLabel, MODIFIER_CHORD_SETS } from './chords.js';
+import { chords, qualityLabel, MODIFIER_CHORD_SETS, DIATONIC_LABELS } from './chords.js';
 import { settings } from './settings.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -159,6 +159,7 @@ export function fixedDirectionLabel(set, dir) {
   if ((set === 'default' && dir in QUALITY_WEDGE_DEFAULTS) || (set === 'extended' && dir === 'up')) {
     return QUALITY_WEDGE_DEFAULTS[dir];
   }
+  if (set === 'diatonic') return DIATONIC_LABELS[dir];
   return (set === 'default' ? chords.CHORD_LABELS[dir] : MODIFIER_CHORD_SETS[set][dir]?.label) ?? '';
 }
 

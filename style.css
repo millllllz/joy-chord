@@ -957,6 +957,10 @@
   .piano-key.long .piano-key-main {
     font-size: 11px;
   }
+  .piano-key.longer .piano-key-main {
+    font-size: 9px;
+    letter-spacing: -0.02em;
+  }
   .piano-key-sub {
     font-size: 10px;
     font-weight: 700;

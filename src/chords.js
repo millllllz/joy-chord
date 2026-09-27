@@ -148,6 +148,9 @@ export function resolvedChordName(keyRoot, degree, direction, modifierSet = 'def
     // can't give a fixed suffix for.
     return `${rootName}${CHORD_SUFFIXES[degree.quality].up}`;
   }
+  if (modifierSet === 'diatonic') {
+    return `${rootName}${DIATONIC_SUFFIXES[diatonicIntervals(degree, direction).join(',')]}`;
+  }
   const entry = MODIFIER_CHORD_SETS[modifierSet]?.[direction];
   const suffix = entry ? entry.suffix : CHORD_SUFFIXES[degree.quality][direction];
   return `${rootName}${suffix}`;
@@ -204,8 +207,58 @@ const CHROMATIC_CHORDS = {
 };
 
 export const MODIFIER_CHORD_SETS = { extended: EXTENDED_CHORDS, chromatic: CHROMATIC_CHORDS };
-export const MODIFIER_SET_NAMES = ['default', 'extended', 'chromatic'];
-export const MODIFIER_SET_LABELS = { default: 'Default', extended: 'Extended', chromatic: 'Chromatic' };
+export const MODIFIER_SET_NAMES = ['default', 'extended', 'chromatic', 'diatonic'];
+export const MODIFIER_SET_LABELS = { default: 'Default', extended: 'Extended', chromatic: 'Chromatic', diatonic: 'Diatonic' };
+
+// Diatonic: not from the HiChord manual. Every chord is stacked from the
+// current key's major scale, so each direction has one meaning ("add the
+// 7th") and the key decides its flavour — maj7 on I and IV, dominant 7 on V,
+// m7b5 on vii. Steps are scale steps above the degree's root (0 root, 2 3rd,
+// 4 5th, 6 7th, 8 9th, 10 11th, 12 13th), so no note ever leaves the key.
+// The 13th omits the 11th, as 13th chords conventionally do.
+const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
+
+const DIATONIC_CHORDS = {
+  center:       { label: '',     steps: [0, 2, 4] },
+  up:           { label: '7th',  steps: [0, 2, 4, 6] },
+  'up-right':   { label: '9th',  steps: [0, 2, 4, 6, 8] },
+  right:        { label: 'Add9', steps: [0, 2, 4, 8] },
+  'down-right': { label: '11th', steps: [0, 2, 4, 6, 8, 10] },
+  down:         { label: 'Sus4', steps: [0, 3, 4] },
+  'down-left':  { label: 'Sus2', steps: [0, 1, 4] },
+  left:         { label: '6th',  steps: [0, 2, 4, 5] },
+  'up-left':    { label: '13th', steps: [0, 2, 4, 6, 8, 12] },
+};
+
+export const DIATONIC_LABELS = Object.fromEntries(
+  Object.entries(DIATONIC_CHORDS).map(([dir, { label }]) => [dir, label]),
+);
+
+// Every shape the table above produces on the 7 degrees, keyed by interval
+// list. Stacking strictly within the key gives some chords a pop-chart
+// version would "fix" by leaving the key (IV sus4 is F-B-C, not F-Bb-C), so
+// those are named for what they are.
+const DIATONIC_SUFFIXES = {
+  '0,4,7': '', '0,4,7,11': 'maj7', '0,4,7,11,14': 'maj9', '0,4,7,14': 'add9',
+  '0,4,7,11,14,17': 'maj11', '0,4,7,11,14,18': 'maj9#11', '0,4,7,11,14,21': 'maj13',
+  '0,4,7,9': '6', '0,4,7,10': '7', '0,4,7,10,14': '9', '0,4,7,10,14,17': '11',
+  '0,4,7,10,14,21': '13',
+  '0,5,7': 'sus4', '0,6,7': 'sus#4', '0,2,7': 'sus2', '0,1,7': 'susb2',
+  '0,3,7': 'm', '0,3,7,10': 'm7', '0,3,7,10,14': 'm9', '0,3,7,14': 'madd9',
+  '0,3,7,10,14,17': 'm11', '0,3,7,10,14,21': 'm13', '0,3,7,10,14,20': 'm9b13',
+  '0,3,7,9': 'm6', '0,3,7,8': 'm(b6)', '0,3,7,10,13': 'm7b9', '0,3,7,13': 'm(addb9)',
+  '0,3,7,10,13,17': 'm11b9', '0,3,7,10,13,20': 'm7b9b13',
+  '0,3,6': 'dim', '0,3,6,10': 'm7b5', '0,3,6,10,13': 'm7b5b9', '0,3,6,13': 'dim(addb9)',
+  '0,3,6,10,13,17': 'm11b5b9', '0,3,6,10,13,20': 'm7b5b9b13', '0,3,6,8': 'dim(b6)',
+  '0,5,6': 'sus4b5', '0,1,6': 'susb2b5',
+};
+
+export function diatonicIntervals(degree, direction) {
+  const root = MAJOR_SCALE.indexOf(degree.semitone);
+  const scaleNote = (step) => MAJOR_SCALE[step % 7] + 12 * Math.floor(step / 7);
+  return (DIATONIC_CHORDS[direction] ?? DIATONIC_CHORDS.center).steps
+    .map(step => scaleNote(root + step) - MAJOR_SCALE[root]);
+}
 
 // What a direction actually sounds under the given modifier set: Default
 // always defers to getChordIntervals unchanged (MODIFIER_CHORD_SETS has no
@@ -214,7 +267,11 @@ export const MODIFIER_SET_LABELS = { default: 'Default', extended: 'Extended', c
 // Extended's 'up' toggle and every mode's 'center' (a plain triad, not one
 // of the 7 real wedges) fall through the same way, for the same reason:
 // neither set defines an entry for them.
-export function getModifierChord(modifierSet, quality, direction) {
+// `degree` is only needed by Diatonic, whose chords depend on where in the
+// scale the degree sits, not just its quality (I and IV are both major but
+// take different 11ths).
+export function getModifierChord(modifierSet, quality, direction, degree) {
+  if (modifierSet === 'diatonic') return diatonicIntervals(degree, direction);
   if (modifierSet === 'extended' && direction === 'up') {
     return getChordIntervals(quality, direction);
   }
@@ -230,19 +287,30 @@ export const INTERVAL_NAMES = [
   'R', 'b9',
 ];
 
+// The same semitone count is spelled differently depending on what else is
+// in the chord: 8 is a #5 in an augmented triad but a b6 next to a perfect
+// (or flat) 5th, and 6 is a b5 in a diminished triad but a #4 beside a 5th.
+export function intervalName(interval, chord) {
+  const hasFifth = chord.includes(7);
+  if (interval === 6 && hasFifth) return '#4';
+  if (interval === 8 && (hasFifth || chord.includes(6))) return 'b6';
+  return INTERVAL_NAMES[interval];
+}
+
 const DEFAULT_DIRECTIONS = ['up', 'up-right', 'right', 'down-right', 'down', 'down-left', 'left', 'up-left'];
 
-// The piano surface's view of the Default modifier set: for a held triad of
-// `quality`, each direction's `signature` is the notes it sounds that the
-// plain triad doesn't, and `primary` is the one key that selects it on its
-// own. Single-note signatures claim their note first; multi-note ones take
-// their first unclaimed note, or get none (Dom7 on a minor/diminished triad)
-// and are only reachable by holding every note of their signature.
-export function pianoModifiers(quality) {
-  const base = chords.BASE_TRIAD[quality];
+// The piano surface's view of a modifier set: for a held degree, each
+// direction's `signature` is the notes it sounds that the plain triad doesn't,
+// and `primary` is the one key that selects it on its own. Single-note
+// signatures claim their note first; multi-note ones take their first
+// unclaimed note, or get none (Default's Dom7 on a minor triad, Diatonic's
+// 9th) and are only reachable by holding every note of their signature.
+export function pianoModifiers(degree, modifierSet = 'default') {
+  const chordFor = (dir) => getModifierChord(modifierSet, degree.quality, dir, degree);
+  const base = chordFor('center');
   const mods = DEFAULT_DIRECTIONS.map(dir => ({
     dir,
-    signature: getChordIntervals(quality, dir).filter(i => !base.includes(i)),
+    signature: chordFor(dir).filter(i => !base.includes(i)),
     primary: null,
   }));
   const claimed = new Set();
@@ -262,8 +330,8 @@ export function pianoModifiers(quality) {
 // Which direction a set of held modifier keys (intervals above the root)
 // selects: an exact signature match wins, so holding every note of a chord
 // always gives that chord; otherwise the most recently pressed key's primary.
-export function resolvePianoModifier(quality, heldIntervals, lastInterval) {
-  const mods = pianoModifiers(quality);
+export function resolvePianoModifier(degree, heldIntervals, lastInterval, modifierSet = 'default') {
+  const mods = pianoModifiers(degree, modifierSet);
   const held = new Set(heldIntervals);
   const exact = mods.find(m => m.signature.length === held.size && m.signature.every(i => held.has(i)));
   if (exact) return exact.dir;

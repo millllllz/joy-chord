@@ -26,12 +26,6 @@ export const settings = {
 
 export const CONTROL_SURFACES = ['joysticks', 'piano'];
 
-// The piano surface only labels Default's modifiers, so it always plays them
-// regardless of the saved set, which is kept for switching back to joysticks.
-export function activeModifierSet() {
-  return settings.controlSurface === 'piano' ? 'default' : settings.modifierSet;
-}
-
 export function init() {
   const keySelectEl = document.getElementById('key-select');
   // KEY_NAMES is indexed by semitone-from-C4 (C=0 first), which is also

@@ -205,8 +205,8 @@ describe('chords module', () => {
     const ii = chords.DEGREES[1];  // minor, semitone 2
     const vii = chords.DEGREES[6]; // diminished, semitone 11
 
-    it('lists default, extended and chromatic', () => {
-      expect(MODIFIER_SET_NAMES).toEqual(['default', 'extended', 'chromatic']);
+    it('lists default, extended, chromatic and diatonic', () => {
+      expect(MODIFIER_SET_NAMES).toEqual(['default', 'extended', 'chromatic', 'diatonic']);
     });
 
     it('defines all 7 non-toggle directions for extended, and all 8 for chromatic', () => {
