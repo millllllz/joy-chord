@@ -41,7 +41,14 @@
           <option value="piano">Piano</option>
         </select>
       </label>
-      <label class="settings-row">
+      <label class="settings-row piano-only">
+        <span>Piano mode</span>
+        <select class="key-select" id="piano-mode-select">
+          <option value="chords">Chords</option>
+          <option value="notes">Notes</option>
+        </select>
+      </label>
+      <label class="settings-row chords-only">
         <span>Chord set</span>
         <select class="key-select modifier-set-select" id="modifier-set-select"></select>
       </label>
@@ -49,7 +56,7 @@
         <span>Hold</span>
         <input type="checkbox" class="switch" id="hold-toggle">
       </label>
-      <label class="settings-row">
+      <label class="settings-row chords-only">
         <span>Bass</span>
         <input type="checkbox" class="switch" id="bass-toggle">
       </label>

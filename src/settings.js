@@ -22,9 +22,15 @@ export const settings = {
   // offer for an octave-shift control.
   octaveOffset: 0,
   controlSurface: 'joysticks',
+  // Whether the piano surface builds a chord from a held degree (see
+  // piano-surface.js) or just plays whatever key you press as a single note,
+  // chromatically, like a plain instrument — no chords.js involved at all.
+  // Irrelevant to the joysticks, which are chord-only by construction.
+  pianoMode: 'chords',
 };
 
 export const CONTROL_SURFACES = ['joysticks', 'piano'];
+export const PIANO_MODES = ['chords', 'notes'];
 
 export function init() {
   const keySelectEl = document.getElementById('key-select');

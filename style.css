@@ -775,6 +775,24 @@
   body.surface-piano #octave-select {
     display: none;
   }
+  /* Notes mode plays every key at its own absolute pitch, so which key is
+     "the key" stops mattering — same reasoning as #octave-select above. */
+  body.surface-piano.piano-mode-notes #key-select {
+    display: none;
+  }
+  /* Piano mode only matters while the piano itself is the active surface;
+     Chord set/Bass, in turn, do nothing in Notes mode (chords.js is never
+     consulted there) — same "hide the control it wouldn't affect" logic as
+     #octave-select above, just for settings-dialog rows instead. */
+  .piano-only {
+    display: none;
+  }
+  body.surface-piano .piano-only {
+    display: flex;
+  }
+  body.surface-piano.piano-mode-notes .chords-only {
+    display: none;
+  }
   .piano-readout {
     flex: 0 0 auto;
     min-height: 52px;

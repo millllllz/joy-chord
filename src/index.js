@@ -37,7 +37,7 @@ import { loadSettings, scheduleSave, flushSave } from './persistence.js';
 import { init as initDegreeJoystick, syncArpToHeldChord, setKeyRoot, setModifierSet, setOctave } from './degree-joystick.js';
 import { init as initModifierJoystick, renderWedgeLabels } from './modifier-joystick.js';
 import { init as initKeyboardView, refreshKeyboardViewLabels } from './keyboard-view.js';
-import { init as initPiano, setControlSurface, releasePiano } from './piano-surface.js';
+import { init as initPiano, setControlSurface, setPianoMode, releasePiano } from './piano-surface.js';
 import { init as initDebug, debugLog } from './debug.js';
 import { chords } from './chords.js';
 import { init as initFullscreen } from './fullscreen.js';
@@ -413,6 +413,13 @@ const surfaceSelectEl = document.getElementById('surface-select');
 surfaceSelectEl.value = settings.controlSurface;
 surfaceSelectEl.addEventListener('change', () => {
   setControlSurface(surfaceSelectEl.value);
+  scheduleSave();
+});
+
+const pianoModeSelectEl = document.getElementById('piano-mode-select');
+pianoModeSelectEl.value = settings.pianoMode;
+pianoModeSelectEl.addEventListener('change', () => {
+  setPianoMode(pianoModeSelectEl.value);
   scheduleSave();
 });
 

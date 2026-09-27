@@ -2,13 +2,24 @@ import { chords, getModifierChord, resolvedChordName, resolvePianoModifier, inte
 import { settings } from './settings.js';
 import { degreeJoystick, pressDegree, releaseAllHeld, onChordChange } from './degree-joystick.js';
 import { setJoyDirection, renderWedgeLabels } from './modifier-joystick.js';
+import { startVoice, stopVoice, noteFreq } from './audio.js';
 
 // A scrolling 81-key piano (A0-F7) as an alternative to the two joysticks.
-// Every scale key is a degree, playable in its own octave; while one is held,
-// the keys above it are labelled with the chord adding them would make (the
-// 7th above C reads "Cmaj7"), so the modifiers are learned as the notes they
-// add. Plays through the same pressDegree/setJoyDirection path as the
-// joysticks, so it always sounds and names chords exactly the way they do.
+// Two modes (settings.pianoMode, a Settings dialog dropdown):
+//
+// - 'chords' (default): every scale key is a degree, playable in its own
+//   octave; while one is held, the keys above it are labelled with the chord
+//   adding them would make (the 7th above C reads "Cmaj7"), so the modifiers
+//   are learned as the notes they add. Plays through the same
+//   pressDegree/setJoyDirection path as the joysticks, so it always sounds
+//   and names chords exactly the way they do.
+// - 'notes': every one of the 81 keys, chromatic and black keys included,
+//   just plays its own pitch — a plain polyphonic instrument, no chord
+//   logic, no chords.js involved. Each key is independent: nothing here is
+//   monophonic-by-root the way 'chords' mode is, so any combination of keys
+//   can sound together. Voices are started/stopped directly (startVoice/
+//   stopVoice), under ids namespaced 'note:<semitone>' so they never collide
+//   with the joysticks' or MIDI's own voice ids.
 //
 // Dragging on the keys plays them, so scrolling is done on the navigator
 // strip (an overview of the whole keyboard with the visible range marked),
@@ -41,6 +52,10 @@ const piano = {
   // With Hold on, modifier keys toggle in and out of this set instead.
   latched: new Set(),
   lastInterval: undefined,
+  // Notes mode's own held-key state, parallel to modPointers/latched above
+  // but keyed by absolute semitone (no root, no modifiers to resolve).
+  notePointers: new Map(), // pointerId -> semitone
+  latchedNotes: new Set(),
 };
 
 const pitchClass = (semitone) => ((semitone % 12) + 12) % 12;
@@ -156,8 +171,35 @@ const chordName = (root, dir) => resolvedChordName(settings.currentKeyRoot, root
 const chordTones = (root, dir) => getModifierChord(settings.modifierSet, root.d.quality, dir, root.d);
 const resolveMods = (root, held, last) => resolvePianoModifier(root.d, held, last, settings.modifierSet);
 
+function currentNotes() {
+  return settings.holdEnabled ? new Set(piano.latchedNotes) : new Set(piano.notePointers.values());
+}
+
 function render() {
   if (!piano.el) return;
+  if (settings.pianoMode === 'notes') { renderNotes(); return; }
+  renderChords();
+}
+
+// Every key just shows its own note name (+ octave number, on C only, same
+// idle-label rhythm as renderChords' unheld state below) and lights up while
+// sounding — no root/modifier concept, since nothing here is chord-built.
+function renderNotes() {
+  const held = currentNotes();
+  piano.keys.forEach(key => {
+    key.mainEl.textContent = noteName(key.semitone);
+    key.subEl.textContent = pitchClass(key.semitone) === 0 ? String(octaveNumber(key.semitone)) : '';
+    key.el.dataset.state = held.has(key.semitone) ? 'root' : '';
+    key.el.classList.remove('long', 'longer');
+  });
+  piano.navRootEl.hidden = true;
+
+  const names = [...held].sort((a, b) => a - b).map(s => noteName(s) + octaveNumber(s));
+  piano.nameEl.textContent = names.join(' · ');
+  piano.formulaEl.textContent = names.length ? '' : 'Play any key';
+}
+
+function renderChords() {
   if (piano.renderedKeyRoot !== settings.currentKeyRoot) {
     piano.renderedKeyRoot = settings.currentKeyRoot;
     if (piano.scrollEl.clientWidth) scrollToHome();
@@ -230,11 +272,18 @@ function clearInput() {
   piano.lastInterval = undefined;
 }
 
-// Stops whatever is sounding and forgets the piano's own held-key state.
+// Stops whatever is sounding and forgets the piano's own held-key state, in
+// both modes at once — so it's a single safe reset to call whenever the
+// surface, piano mode, or key changes mid-play, regardless of which mode was
+// actually active.
 export function releasePiano() {
   clearInput();
   releaseAllHeld();
   setJoyDirection('center');
+  piano.notePointers.forEach(semitone => stopVoice(`note:${semitone}`));
+  piano.notePointers.clear();
+  piano.latchedNotes.forEach(semitone => stopVoice(`note:${semitone}`));
+  piano.latchedNotes.clear();
   render();
 }
 
@@ -246,11 +295,41 @@ function pressRoot(pointerId, key, degree) {
   render();
 }
 
+// Notes mode: no root, no modifiers to resolve — every key is independent,
+// so this is just startVoice/stopVoice keyed by pointer, the same shape as
+// MIDI note-on/off (see midi.js) rather than anything shared with the chord
+// path above.
+function onNotePointerDown(e, key) {
+  const id = `note:${key.semitone}`;
+  if (settings.holdEnabled) {
+    if (piano.latchedNotes.has(key.semitone)) {
+      piano.latchedNotes.delete(key.semitone);
+      stopVoice(id);
+    } else {
+      piano.latchedNotes.add(key.semitone);
+      startVoice(id, noteFreq(key.semitone));
+    }
+  } else {
+    piano.notePointers.set(e.pointerId, key.semitone);
+    startVoice(id, noteFreq(key.semitone));
+  }
+  render();
+}
+
+function onNotePointerUp(e) {
+  const semitone = piano.notePointers.get(e.pointerId);
+  if (semitone === undefined) return;
+  piano.notePointers.delete(e.pointerId);
+  stopVoice(`note:${semitone}`);
+  render();
+}
+
 function onPointerDown(e) {
   const keyEl = e.target.closest('.piano-key');
   if (!keyEl) return;
   e.preventDefault();
   const key = piano.keys[Number(keyEl.dataset.index)];
+  if (settings.pianoMode === 'notes') { onNotePointerDown(e, key); return; }
   const root = heldRoot();
 
   if (root) {
@@ -283,6 +362,7 @@ function onPointerDown(e) {
 }
 
 function onPointerUp(e) {
+  if (settings.pianoMode === 'notes') { onNotePointerUp(e); return; }
   if (e.pointerId === piano.rootPointer) {
     piano.rootPointer = null;
     if (!settings.holdEnabled) releasePiano();
@@ -305,6 +385,16 @@ export function setControlSurface(surface) {
   // Wedge labels are measured with getBBox, which reads zero while the
   // joysticks are hidden, so they have to be redrawn once visible again.
   if (surface === 'joysticks') renderWedgeLabels();
+}
+
+// Wired to #piano-mode-select in index.js. releasePiano() covers both modes
+// unconditionally, so switching mid-play never leaves a stray voice ringing
+// under the mode that's no longer active.
+export function setPianoMode(mode) {
+  const changed = mode !== settings.pianoMode;
+  settings.pianoMode = mode;
+  document.body.classList.toggle('piano-mode-notes', mode === 'notes');
+  if (changed) releasePiano();
 }
 
 export function init() {
