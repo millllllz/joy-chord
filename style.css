@@ -88,9 +88,8 @@
     text-align: center;
     box-sizing: border-box;
   }
-  /* Portrait: degree stick, controls, modifier stick stacked top to bottom
-     in DOM order. Flex rather than grid, because "give the two sticks an
-     equal share of whatever the controls leave behind" is exactly what
+  /* Portrait: degree stick above modifier stick, in DOM order. Flex rather
+     than grid, because "give the two sticks an equal share" is exactly what
      flex: 1 1 0 with min-height: 0 means — no track minimums, and nothing
      for a child to resolve a percentage against.
 
@@ -135,51 +134,8 @@
     user-select: none;
     -webkit-user-select: none;
   }
-  .joysticks .controls {
-    /* Minimum touch target for every button/select inside (inherited via
-       the custom property). 44px is the usual guideline and portrait has
-       the room for it; landscape overrides it below, because there the
-       controls and the two sticks are competing for the same scarce
-       vertical space and 44px would push the panel back off-screen. */
-    --touch-target: 44px;
-    /* Nothing in here is text anyone wants to select, and the FX buttons
-       specifically can't afford to be: opening a dialog *is* a long-press
-       (see LONG_PRESS_MS in index.js), which is the same gesture iOS uses
-       to start a selection — so holding one would raise the callout bubble
-       and magnifier over the dialog it just opened. -webkit-touch-callout
-       is the one that suppresses that bubble; user-select alone doesn't.
-       Both inherit, so this covers the buttons, labels and selects inside. */
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
-    /* Sized by its own content and centred, never stretched to the full
-       width the sticks take. */
-    flex: 0 0 auto;
-    align-self: center;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    max-width: 100%;
-    /* .controls is a <fieldset> — the single bordered "set of all
-       controls" panel, replacing the browser default border/margin/
-       padding. FX and Sound are plain <div>s inside it now, not their
-       own bordered fieldsets, so there's one box, not two side by side.
-       --wedge-stroke is defined as var(--bg) itself (for seamless wedge
-       edges against the page background), so it's invisible for an
-       actual visible outline like this one — --panel-hover reads as a
-       subtle but real line instead. */
-    margin: 0;
-    padding: 0;
-    border: none;
-    border-radius: 8px;
-  }
-
-  /* Landscape: the same three children in the same DOM order, laid out
-     left to right instead — sticks taking an equal share of the width with
-     the controls column between them. */
+  /* Landscape: the same sticks in the same DOM order, laid out left to
+     right instead, each taking an equal share of the width. */
   @media (orientation: landscape) {
     .joysticks {
       flex-direction: row;
@@ -194,34 +150,6 @@
       min-width: 0;
       width: auto;
       height: 100%;
-    }
-    .joysticks .controls {
-      --touch-target: 32px;
-      flex-direction: column;
-      /* Portrait's wrap exists so an overlong row breaks onto more rows;
-         in landscape that would instead put the FX and Sound sub-groups
-         side by side in a second column once they overflow the row's
-         height, which reads as "not stacked" — force a single column. */
-      flex-wrap: nowrap;
-      gap: 4px;
-    }
-    /* The two sub-groups lay their items out two-up instead of in one tall
-       stack. One stack of 11 items came to a fixed 316px whatever the
-       viewport was, so it was simply cut off on any landscape phone whose
-       visible height lands under that (iOS Safari's toolbar/tab bar puts a
-       13 mini well under it) — and bigger touch targets would have made
-       that worse, not better. Two columns trade width, which landscape has
-       in abundance, for the height it doesn't: ~180px wide instead of
-       ~100px, but roughly 220px tall instead of 316px. The two *groups*
-       still read as stacked, which is the part that matters. */
-    .fx-toggles,
-    .sound-controls {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px;
-    }
-    .controls-group-label {
-      grid-column: 1 / -1;
     }
   }
   /* Shared wedge styles for both joysticks (8-wedge chord + 7-wedge degree).
@@ -504,91 +432,6 @@
     background-color: var(--panel-hover);
   }
 
-  /* FX and Sound are plain sub-groups inside the single .controls
-     fieldset now (see above) — no border of their own, just their own
-     flex flow; only their item axis differs. */
-  .fx-toggles,
-  .sound-controls {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 4px;
-  }
-  /* This rule has no media guard, so in source order it would otherwise
-     beat the landscape override above it (same selector, same specificity —
-     last one in the cascade wins regardless of which came first or which
-     media query it's nested in). Restating the landscape layout here,
-     after it, is what actually makes it stick — including display itself,
-     since the flex above would otherwise cancel the grid. */
-  @media (orientation: landscape) {
-    .fx-toggles,
-    .sound-controls {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-    }
-    /* An odd number of buttons leaves the last one alone on its row, which
-       reads as unbalanced (the same orphan-row problem the wrapping
-       portrait row has). The group's first child is its label, so a last
-       button at an even position is the one with no partner — let it span
-       instead, which also makes it a wider target. Self-correcting: add a
-       sixth FX button and it pairs up, and the rule stops matching. */
-    .fx-toggle:last-child:nth-child(even) {
-      grid-column: 1 / -1;
-    }
-  }
-  /* flex-basis: 100% reliably forces the label onto its own line when the
-     group is a row (basis = width). Landscape lays the group out as a
-     two-column grid instead, where spanning both columns is what puts the
-     label on its own line. */
-  .controls-group-label {
-    flex-basis: 100%;
-    padding: 0 0 2px;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--muted);
-    text-align: center;
-  }
-  @media (orientation: landscape) {
-    .controls-group-label {
-      grid-column: 1 / -1;
-      border-bottom: solid 1px;
-    }
-  }
-  .sound-controls {
-    gap: 8px;
-    margin-top: 1em;
-  }
-  .fx-toggle {
-    /* inline-flex so the label stays centred once min-height makes the
-       button taller than its own text. */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: var(--touch-target);
-    padding: 5px 10px;
-    border-radius: 4px;
-    border: none;
-    background: var(--panel);
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 700;
-    font-family: inherit;
-    text-transform: uppercase;
-    cursor: pointer;
-    touch-action: manipulation;
-    transition: background 0.1s ease, color 0.1s ease;
-  }
-  .fx-toggle:hover {
-    background: var(--panel-hover);
-  }
-  .fx-toggle.active {
-    background: var(--accent-active);
-    color: var(--label-active);
-  }
-
   .fx-dialog {
     border: none;
     border-radius: 14px;
@@ -617,22 +460,8 @@
     font-size: 16px;
     font-weight: 700;
   }
-  .fx-dialog-enable {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .fx-dialog-enable input {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--accent-active);
-    cursor: pointer;
-  }
   .fx-dialog-note {
-    margin: -8px 0 0;
+    margin: 0;
     font-size: 11px;
     color: var(--muted);
   }
@@ -674,38 +503,6 @@
   .fx-dialog-close:hover {
     background: var(--accent-active);
     color: var(--label-active);
-  }
-
-  .fullscreen-btn {
-    position: fixed;
-    top: 12px;
-    right: 12px;
-    z-index: 1000;
-    width: 44px;
-    height: 44px;
-    border-radius: 8px;
-    border: none;
-    background: var(--panel);
-    color: var(--muted);
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    touch-action: manipulation;
-    /* hidden by default; JS reveals it only if the Fullscreen API is
-       actually supported, since it's a dead no-op on some mobile browsers */
-    display: none;
-  }
-  .fullscreen-btn.supported {
-    display: flex;
-  }
-  .fullscreen-btn:hover {
-    background: var(--panel-hover);
-    color: var(--text);
-  }
-  .fullscreen-btn svg {
-    width: 18px;
-    height: 18px;
   }
 
   .build-version {
@@ -754,4 +551,350 @@
     border: none;
     opacity: 0.5;
     padding: 4px;
+  }
+
+  /* Top bar: settings, the two controls changed mid-performance (key and
+     octave), and fullscreen. Everything else lives in the settings dialog. */
+  .topbar {
+    --touch-target: 40px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  @media (orientation: landscape) and (max-height: 500px) {
+    .topbar {
+      --touch-target: 32px;
+      padding-top: 4px;
+    }
+  }
+  .topbar-spacer {
+    flex: 1;
+  }
+  .icon-btn {
+    width: var(--touch-target);
+    height: var(--touch-target);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 8px;
+    border: none;
+    background: var(--panel);
+    color: var(--muted);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .icon-btn:hover {
+    background: var(--panel-hover);
+    color: var(--text);
+  }
+  .icon-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+  /* Hidden until fullscreen.js confirms the Fullscreen API works here. */
+  .fullscreen-btn {
+    display: none;
+  }
+  .fullscreen-btn.supported {
+    display: flex;
+  }
+
+  .settings-dialog {
+    --touch-target: 36px;
+    width: min(380px, 92vw);
+    max-height: 88dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .settings-dialog .fx-dialog-form {
+    gap: 10px;
+  }
+  .settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .settings-header .fx-dialog-close {
+    align-self: auto;
+  }
+  .settings-group {
+    margin: 10px 0 0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 36px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .settings-row .key-select {
+    width: 128px;
+  }
+  .settings-row .key-select:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  /* On/off switch: a restyled checkbox. */
+  .switch {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 24px;
+    margin: 0;
+    border-radius: 12px;
+    background: var(--panel-hover);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .switch::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  .switch:checked {
+    background: var(--accent-active);
+  }
+  .switch:checked::after {
+    transform: translateX(16px);
+    background: var(--label-active);
+  }
+
+  /* An effect: a collapsible <details> for its parameters, with its on/off
+     switch laid over the summary row so toggling it never expands it. */
+  .fx-section {
+    position: relative;
+    border-radius: 10px;
+    background: var(--bg);
+  }
+  .fx-section summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 64px 0 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+  }
+  .fx-section summary::-webkit-details-marker {
+    display: none;
+  }
+  .fx-section summary::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    margin-right: 10px;
+    border-right: 1.5px solid var(--muted);
+    border-bottom: 1.5px solid var(--muted);
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+  }
+  .fx-section details[open] summary::before {
+    transform: rotate(45deg);
+  }
+  .fx-section-switch {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+  }
+  .fx-section-params {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 4px 12px 14px;
+  }
+
+  /* Piano surface: shown in place of the joysticks when selected in
+     settings (body.surface-piano, see piano-surface.js). */
+  .piano-surface {
+    display: none;
+    flex: 1 1 auto;
+    align-self: stretch;
+    min-height: 0;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 12px 32px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    --piano-white: #2a2e35;
+    --piano-white-edge: #14161a;
+    --piano-black: #0b0c0e;
+    --piano-tone: rgba(110, 231, 201, 0.28);
+  }
+  @media (prefers-color-scheme: light) {
+    .piano-surface {
+      --piano-white: #ffffff;
+      --piano-white-edge: #c9ccd1;
+      --piano-black: #2b2f36;
+      --piano-tone: rgba(5, 150, 105, 0.22);
+    }
+  }
+  body.surface-piano .piano-surface {
+    display: flex;
+  }
+  body.surface-piano .joysticks {
+    display: none;
+  }
+  .piano-readout {
+    flex: 0 0 auto;
+    min-height: 52px;
+  }
+  .piano-chord-name {
+    min-height: 32px;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .piano-chord-formula {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .piano-keys {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    touch-action: none;
+  }
+
+  /* Keys are laid out along one axis by --pos/--size (set per key in JS):
+     left-to-right in landscape; in portrait the keyboard turns on its side,
+     low notes at the bottom, so labels get the full width to read in. */
+  .piano-key {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    top: 0;
+    left: var(--pos);
+    width: var(--size);
+    height: 100%;
+    padding: 0 0 10px;
+    border: 1px solid var(--piano-white-edge);
+    border-radius: 0 0 6px 6px;
+    background: var(--piano-white);
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.08s ease, box-shadow 0.08s ease;
+  }
+  .piano-key.black {
+    z-index: 1;
+    height: 62%;
+    padding-bottom: 6px;
+    border-color: var(--piano-black);
+    background: var(--piano-black);
+    color: #8a8f98;
+  }
+  @media (orientation: portrait) {
+    .piano-key {
+      flex-direction: row;
+      justify-content: flex-end;
+      top: auto;
+      left: 0;
+      bottom: var(--pos);
+      width: 100%;
+      height: var(--size);
+      padding: 0 12px 0 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .piano-key.black {
+      width: 62%;
+      height: var(--size);
+      padding: 0 8px 0 0;
+    }
+  }
+  .piano-key-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    line-height: 1.1;
+    pointer-events: none;
+  }
+  @media (orientation: portrait) {
+    .piano-key-label {
+      align-items: flex-end;
+    }
+    .piano-key.black .piano-key-label {
+      flex-direction: row;
+      align-items: baseline;
+      gap: 6px;
+    }
+  }
+  .piano-key-main {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .piano-key.long .piano-key-main {
+    font-size: 11px;
+  }
+  .piano-key-sub {
+    font-size: 10px;
+    font-weight: 700;
+    opacity: 0.8;
+  }
+  .piano-key.black .piano-key-main {
+    font-size: 11px;
+  }
+  .piano-key.black .piano-key-sub {
+    font-size: 9px;
+  }
+  .piano-key[data-state="degree"] {
+    color: var(--text);
+  }
+  .piano-key.black[data-state="degree"] {
+    color: #e8eaed;
+  }
+  .piano-key[data-state="tone"] {
+    background: var(--piano-tone);
+    color: var(--text);
+  }
+  .piano-key.black[data-state="tone"] {
+    background: color-mix(in srgb, var(--accent) 45%, var(--piano-black));
+    color: #e8eaed;
+  }
+  .piano-key[data-state="option"] {
+    color: var(--accent);
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+  .piano-key[data-state="root"],
+  .piano-key[data-state="mod"] {
+    background: var(--accent);
+    color: var(--label-active);
+  }
+  .piano-key[data-state="mod"] {
+    background: var(--accent-active);
+  }
+  /* Landscape black keys are only ~30px wide on a phone. */
+  @media (orientation: landscape) {
+    .piano-key.black .piano-key-main {
+      font-size: 9px;
+      letter-spacing: -0.02em;
+    }
+    .piano-key.black .piano-key-sub {
+      font-size: 8px;
+    }
   }

@@ -1,4 +1,4 @@
-import { settings, setHoldEnabled, setBassEnabled } from './settings.js';
+import { settings, setHoldEnabled, setBassEnabled, CONTROL_SURFACES } from './settings.js';
 import {
   audio,
   setWaveType,
@@ -33,6 +33,7 @@ import {
 import { arpeggiator, ORDER_NAMES, setArpEnabled, setArpOrder, setArpRate } from './arpeggiator.js';
 import { setKeyRoot, setModifierSet, setOctave } from './degree-joystick.js';
 import { chords, MODIFIER_SET_NAMES } from './chords.js';
+import { setControlSurface } from './piano-surface.js';
 
 // Bumping the version in the key abandons every older blob outright, which
 // is the whole migration story: these are all re-tweakable in seconds, so
@@ -58,6 +59,7 @@ const oneOf = (allowed) => (v) => allowed.includes(v);
 // since feeding NaN or an out-of-range number into an AudioParam throws and
 // would take the whole boot down with it.
 const SCHEMA = {
+  surface: { read: () => settings.controlSurface, write: setControlSurface, valid: oneOf(CONTROL_SURFACES) },
   keyRoot: { read: () => settings.currentKeyRoot, write: setKeyRoot, valid: number(-12, 11) },
   octave: { read: () => settings.octaveOffset, write: setOctave, valid: number(-2, 2) },
   hold: { read: () => settings.holdEnabled, write: setHoldEnabled, valid: boolean },

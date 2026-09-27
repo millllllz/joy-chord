@@ -168,6 +168,8 @@ export function fixedDirectionLabel(set, dir) {
 // release (the held quality can flip which half of a Default/Extended
 // split label is dimmed), and whenever the modifier set itself changes.
 export function renderWedgeLabels() {
+  // Settings are restored before init() has found the label elements.
+  if (!joyLabelEls.up) return;
   const set = settings.modifierSet;
   const quality = soleHeldQuality();
   MODIFIER_DIRECTIONS.forEach(dir => {

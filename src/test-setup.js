@@ -149,6 +149,8 @@ global.document = {
     createSVGPoint: vi.fn(),
   })),
   elementFromPoint: vi.fn(() => null),
+  // setControlSurface toggles a class on <body> when a saved surface is restored.
+  body: { classList: { add: vi.fn(), remove: vi.fn(), toggle: vi.fn(), contains: vi.fn(() => false) } },
 };
 
 // Mock SVG element

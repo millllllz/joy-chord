@@ -26,158 +26,214 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <dialog class="fx-dialog" id="delay-dialog">
+  <dialog class="fx-dialog settings-dialog" id="settings-dialog">
     <form method="dialog" class="fx-dialog-form">
-      <h2>Delay</h2>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Time <span class="fx-dialog-value" id="delay-time-value">280ms</span></span>
-        <input type="range" id="delay-time-slider" min="0.02" max="1" step="0.01" value="0.28">
+      <div class="settings-header">
+        <h2>Settings</h2>
+        <button type="submit" class="fx-dialog-close">Done</button>
+      </div>
+
+      <h3 class="settings-group">Play</h3>
+      <label class="settings-row">
+        <span>Surface</span>
+        <select class="key-select" id="surface-select">
+          <option value="joysticks">Joysticks</option>
+          <option value="piano">Piano</option>
+        </select>
       </label>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Feedback <span class="fx-dialog-value" id="delay-feedback-value">50%</span></span>
-        <input type="range" id="delay-feedback-slider" min="0" max="0.9" step="0.01" value="0.5">
+      <label class="settings-row">
+        <span>Chord set</span>
+        <select class="key-select modifier-set-select" id="modifier-set-select"></select>
       </label>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Send <span class="fx-dialog-value" id="delay-send-value">38%</span></span>
-        <input type="range" id="delay-send-slider" min="0" max="1" step="0.01" value="0.38">
+      <label class="settings-row">
+        <span>Hold</span>
+        <input type="checkbox" class="switch" id="hold-toggle">
       </label>
-      <button type="submit" class="fx-dialog-close">Close</button>
+      <label class="settings-row">
+        <span>Bass</span>
+        <input type="checkbox" class="switch" id="bass-toggle">
+      </label>
+
+      <h3 class="settings-group">Sound</h3>
+      <label class="settings-row">
+        <span>Wave</span>
+        <select class="key-select wave-select" id="wave-select"></select>
+      </label>
+      <div class="fx-section">
+        <details>
+          <summary>Envelope</summary>
+          <div class="fx-section-params">
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Attack <span class="fx-dialog-value" id="envelope-attack-value">10ms</span></span>
+              <input type="range" id="envelope-attack-slider" min="0.001" max="0.5" step="0.001" value="0.01">
+            </label>
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Decay <span class="fx-dialog-value" id="envelope-decay-value">100ms</span></span>
+              <input type="range" id="envelope-decay-slider" min="0" max="1" step="0.01" value="0.1">
+            </label>
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Sustain <span class="fx-dialog-value" id="envelope-sustain-value">70%</span></span>
+              <input type="range" id="envelope-sustain-slider" min="0" max="1" step="0.01" value="0.7">
+            </label>
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Release <span class="fx-dialog-value" id="envelope-release-value">80ms</span></span>
+              <input type="range" id="envelope-release-slider" min="0.01" max="1" step="0.01" value="0.08">
+            </label>
+          </div>
+        </details>
+      </div>
+      <div class="fx-section">
+        <details>
+          <summary>Unison</summary>
+          <div class="fx-section-params">
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Voices <span class="fx-dialog-value" id="unison-voices-value">3</span></span>
+              <input type="range" id="unison-voices-slider" min="2" max="4" step="1" value="3">
+            </label>
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Detune <span class="fx-dialog-value" id="unison-detune-value">12c</span></span>
+              <input type="range" id="unison-detune-slider" min="0" max="30" step="1" value="12">
+            </label>
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Spread <span class="fx-dialog-value" id="unison-spread-value">60%</span></span>
+              <input type="range" id="unison-spread-slider" min="0" max="1" step="0.01" value="0.6">
+            </label>
+          </div>
+        </details>
+        <input type="checkbox" class="switch fx-section-switch" id="unison-toggle" aria-label="Unison">
+      </div>
+      <div class="fx-section">
+        <details>
+          <summary>Glide</summary>
+          <div class="fx-section-params">
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Time <span class="fx-dialog-value" id="glide-time-value">120ms</span></span>
+              <input type="range" id="glide-time-slider" min="0.02" max="0.4" step="0.01" value="0.12">
+            </label>
+          </div>
+        </details>
+        <input type="checkbox" class="switch fx-section-switch" id="glide-toggle" aria-label="Glide">
+      </div>
+      <div class="fx-section">
+        <details>
+          <summary>Arp</summary>
+          <div class="fx-section-params">
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Rate <span class="fx-dialog-value" id="arp-rate-value">8.0Hz</span></span>
+              <input type="range" id="arp-rate-slider" min="1" max="20" step="0.5" value="8">
+            </label>
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Order</span>
+              <select class="key-select" id="arp-order-select"></select>
+            </label>
+          </div>
+        </details>
+        <input type="checkbox" class="switch fx-section-switch" id="arp-toggle" aria-label="Arp">
+      </div>
+
+      <h3 class="settings-group">Effects</h3>
+      <div class="fx-section">
+        <details>
+          <summary>Delay</summary>
+          <div class="fx-section-params">
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Time <span class="fx-dialog-value" id="delay-time-value">280ms</span></span>
+              <input type="range" id="delay-time-slider" min="0.02" max="1" step="0.01" value="0.28">
+            </label>
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Feedback <span class="fx-dialog-value" id="delay-feedback-value">50%</span></span>
+              <input type="range" id="delay-feedback-slider" min="0" max="0.9" step="0.01" value="0.5">
+            </label>
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Send <span class="fx-dialog-value" id="delay-send-value">38%</span></span>
+              <input type="range" id="delay-send-slider" min="0" max="1" step="0.01" value="0.38">
+            </label>
+          </div>
+        </details>
+        <input type="checkbox" class="switch fx-section-switch" id="delay-toggle" aria-label="Delay">
+      </div>
+      <div class="fx-section">
+        <details>
+          <summary>Reverb</summary>
+          <div class="fx-section-params">
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Decay <span class="fx-dialog-value" id="reverb-decay-value">3.5s</span></span>
+              <input type="range" id="reverb-decay-slider" min="0.2" max="5" step="0.1" value="3.5">
+            </label>
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Send <span class="fx-dialog-value" id="reverb-send-value">35%</span></span>
+              <input type="range" id="reverb-send-slider" min="0" max="1" step="0.01" value="0.35">
+            </label>
+          </div>
+        </details>
+        <input type="checkbox" class="switch fx-section-switch" id="reverb-toggle" aria-label="Reverb">
+      </div>
+      <div class="fx-section">
+        <details>
+          <summary>Filter</summary>
+          <div class="fx-section-params">
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Cutoff <span class="fx-dialog-value" id="filter-cutoff-value">2.5kHz</span></span>
+              <input type="range" id="filter-cutoff-slider" min="0" max="1" step="0.001" value="0.642">
+            </label>
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Resonance <span class="fx-dialog-value" id="filter-resonance-value">1.0</span></span>
+              <input type="range" id="filter-resonance-slider" min="0.1" max="20" step="0.1" value="1">
+            </label>
+          </div>
+        </details>
+        <input type="checkbox" class="switch fx-section-switch" id="filter-toggle" aria-label="Filter">
+      </div>
+      <div class="fx-section">
+        <details>
+          <summary>Tremolo</summary>
+          <div class="fx-section-params">
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Rate <span class="fx-dialog-value" id="tremolo-rate-value">5.0Hz</span></span>
+              <input type="range" id="tremolo-rate-slider" min="0.5" max="12" step="0.1" value="5">
+            </label>
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Depth <span class="fx-dialog-value" id="tremolo-depth-value">50%</span></span>
+              <input type="range" id="tremolo-depth-slider" min="0" max="1" step="0.01" value="0.5">
+            </label>
+          </div>
+        </details>
+        <input type="checkbox" class="switch fx-section-switch" id="tremolo-toggle" aria-label="Tremolo">
+      </div>
+      <div class="fx-section">
+        <details>
+          <summary>Vocoder</summary>
+          <div class="fx-section-params">
+            <p class="fx-dialog-note">Uses your microphone — talk or sing while holding a chord.</p>
+            <label class="fx-dialog-param">
+              <span class="fx-dialog-param-label">Mix <span class="fx-dialog-value" id="vocoder-mix-value">90%</span></span>
+              <input type="range" id="vocoder-mix-slider" min="0" max="1" step="0.01" value="0.9">
+            </label>
+          </div>
+        </details>
+        <input type="checkbox" class="switch fx-section-switch" id="vocoder-toggle" aria-label="Vocoder">
+      </div>
     </form>
   </dialog>
 
-  <dialog class="fx-dialog" id="reverb-dialog">
-    <form method="dialog" class="fx-dialog-form">
-      <h2>Reverb</h2>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Decay <span class="fx-dialog-value" id="reverb-decay-value">3.5s</span></span>
-        <input type="range" id="reverb-decay-slider" min="0.2" max="5" step="0.1" value="3.5">
-      </label>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Send <span class="fx-dialog-value" id="reverb-send-value">35%</span></span>
-        <input type="range" id="reverb-send-slider" min="0" max="1" step="0.01" value="0.35">
-      </label>
-      <button type="submit" class="fx-dialog-close">Close</button>
-    </form>
-  </dialog>
-
-  <dialog class="fx-dialog" id="filter-dialog">
-    <form method="dialog" class="fx-dialog-form">
-      <h2>Filter</h2>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Cutoff <span class="fx-dialog-value" id="filter-cutoff-value">2.5kHz</span></span>
-        <input type="range" id="filter-cutoff-slider" min="0" max="1" step="0.001" value="0.642">
-      </label>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Resonance <span class="fx-dialog-value" id="filter-resonance-value">1.0</span></span>
-        <input type="range" id="filter-resonance-slider" min="0.1" max="20" step="0.1" value="1">
-      </label>
-      <button type="submit" class="fx-dialog-close">Close</button>
-    </form>
-  </dialog>
-
-  <dialog class="fx-dialog" id="tremolo-dialog">
-    <form method="dialog" class="fx-dialog-form">
-      <h2>Tremolo</h2>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Rate <span class="fx-dialog-value" id="tremolo-rate-value">5.0Hz</span></span>
-        <input type="range" id="tremolo-rate-slider" min="0.5" max="12" step="0.1" value="5">
-      </label>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Depth <span class="fx-dialog-value" id="tremolo-depth-value">50%</span></span>
-        <input type="range" id="tremolo-depth-slider" min="0" max="1" step="0.01" value="0.5">
-      </label>
-      <button type="submit" class="fx-dialog-close">Close</button>
-    </form>
-  </dialog>
-
-  <dialog class="fx-dialog" id="glide-dialog">
-    <form method="dialog" class="fx-dialog-form">
-      <h2>Glide</h2>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Time <span class="fx-dialog-value" id="glide-time-value">120ms</span></span>
-        <input type="range" id="glide-time-slider" min="0.02" max="0.4" step="0.01" value="0.12">
-      </label>
-      <button type="submit" class="fx-dialog-close">Close</button>
-    </form>
-  </dialog>
-
-  <dialog class="fx-dialog" id="unison-dialog">
-    <form method="dialog" class="fx-dialog-form">
-      <h2>Unison</h2>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Voices <span class="fx-dialog-value" id="unison-voices-value">3</span></span>
-        <input type="range" id="unison-voices-slider" min="2" max="4" step="1" value="3">
-      </label>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Detune <span class="fx-dialog-value" id="unison-detune-value">12c</span></span>
-        <input type="range" id="unison-detune-slider" min="0" max="30" step="1" value="12">
-      </label>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Spread <span class="fx-dialog-value" id="unison-spread-value">60%</span></span>
-        <input type="range" id="unison-spread-slider" min="0" max="1" step="0.01" value="0.6">
-      </label>
-      <button type="submit" class="fx-dialog-close">Close</button>
-    </form>
-  </dialog>
-
-  <dialog class="fx-dialog" id="vocoder-dialog">
-    <form method="dialog" class="fx-dialog-form">
-      <h2>Vocoder</h2>
-      <p class="fx-dialog-note">Uses your microphone — talk or sing while holding a chord.</p>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Mix <span class="fx-dialog-value" id="vocoder-mix-value">90%</span></span>
-        <input type="range" id="vocoder-mix-slider" min="0" max="1" step="0.01" value="0.9">
-      </label>
-      <button type="submit" class="fx-dialog-close">Close</button>
-    </form>
-  </dialog>
-
-  <dialog class="fx-dialog" id="arp-dialog">
-    <form method="dialog" class="fx-dialog-form">
-      <h2>Arp</h2>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Rate <span class="fx-dialog-value" id="arp-rate-value">8.0Hz</span></span>
-        <input type="range" id="arp-rate-slider" min="1" max="20" step="0.5" value="8">
-      </label>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Order</span>
-        <select class="key-select" id="arp-order-select"></select>
-      </label>
-      <button type="submit" class="fx-dialog-close">Close</button>
-    </form>
-  </dialog>
-
-  <dialog class="fx-dialog" id="envelope-dialog">
-    <form method="dialog" class="fx-dialog-form">
-      <h2>Envelope</h2>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Attack <span class="fx-dialog-value" id="envelope-attack-value">10ms</span></span>
-        <input type="range" id="envelope-attack-slider" min="0.001" max="0.5" step="0.001" value="0.01">
-      </label>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Decay <span class="fx-dialog-value" id="envelope-decay-value">100ms</span></span>
-        <input type="range" id="envelope-decay-slider" min="0" max="1" step="0.01" value="0.1">
-      </label>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Sustain <span class="fx-dialog-value" id="envelope-sustain-value">70%</span></span>
-        <input type="range" id="envelope-sustain-slider" min="0" max="1" step="0.01" value="0.7">
-      </label>
-      <label class="fx-dialog-param">
-        <span class="fx-dialog-param-label">Release <span class="fx-dialog-value" id="envelope-release-value">80ms</span></span>
-        <input type="range" id="envelope-release-slider" min="0.01" max="1" step="0.01" value="0.08">
-      </label>
-      <button type="submit" class="fx-dialog-close">Close</button>
-    </form>
-  </dialog>
-
-  <button class="fullscreen-btn" id="fullscreen-btn" aria-label="Toggle fullscreen" type="button">
-    <svg id="fullscreen-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-    </svg>
-    <svg id="fullscreen-icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
-      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-    </svg>
-  </button>
+  <header class="topbar">
+    <button class="icon-btn" id="settings-btn" type="button" aria-label="Settings" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />
+      </svg>
+    </button>
+    <select class="key-select" id="key-select" aria-label="Key"></select>
+    <select class="key-select" id="octave-select" aria-label="Octave"></select>
+    <span class="topbar-spacer"></span>
+    <button class="icon-btn fullscreen-btn" id="fullscreen-btn" aria-label="Toggle fullscreen" type="button">
+      <svg id="fullscreen-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+      </svg>
+      <svg id="fullscreen-icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+        <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+      </svg>
+    </button>
+  </header>
 
   <div class="build-version" id="build-version">b0c388d</div>
   <button class="debug-toggle" id="debug-toggle" type="button">debug</button>
@@ -199,29 +255,6 @@
         <circle class="stick-dot" id="degree-stick-dot" cx="110" cy="110" r="14" />
       </svg>
 
-      <fieldset class="controls">
-        <div class="fx-toggles">
-          <span class="controls-group-label">FX</span>
-          <button class="fx-toggle" id="delay-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Delay</button>
-          <button class="fx-toggle" id="reverb-toggle" type="button" aria-pressed="true" aria-haspopup="dialog">Reverb</button>
-          <button class="fx-toggle" id="filter-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Filter</button>
-          <button class="fx-toggle" id="tremolo-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Tremolo</button>
-          <button class="fx-toggle" id="glide-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Glide</button>
-          <button class="fx-toggle" id="arp-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Arp</button>
-          <button class="fx-toggle" id="unison-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Unison</button>
-          <button class="fx-toggle" id="vocoder-toggle" type="button" aria-pressed="false" aria-haspopup="dialog">Vocoder</button>
-        </div>
-        <div class="sound-controls">
-          <span class="controls-group-label">Sound</span>
-          <button class="fx-toggle" id="hold-toggle" type="button" aria-pressed="false">Hold</button>
-          <button class="fx-toggle" id="bass-toggle" type="button" aria-pressed="false">Bass</button>
-          <button class="fx-toggle" id="envelope-toggle" type="button" aria-haspopup="dialog">Env</button>
-          <select class="key-select" id="key-select"></select>
-          <select class="key-select" id="octave-select"></select>
-          <select class="key-select wave-select" id="wave-select"></select>
-          <select class="key-select modifier-set-select" id="modifier-set-select"></select>
-        </div>
-      </fieldset>
 
       <svg class="joystick" id="joystick" viewBox="0 0 220 220">
         <defs>
@@ -278,6 +311,14 @@
         <circle class="stick-dot" id="joy-stick-dot" cx="110" cy="110" r="14" />
       </svg>
       <div class="keyboard-view" id="modifier-keyboard-view"></div>
+    </div>
+
+    <div class="piano-surface" id="piano-surface">
+      <div class="piano-readout">
+        <div class="piano-chord-name" id="piano-chord-name"></div>
+        <div class="piano-chord-formula" id="piano-chord-formula"></div>
+      </div>
+      <div class="piano-keys" id="piano-keys"></div>
     </div>
   </div>
 

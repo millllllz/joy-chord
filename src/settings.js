@@ -21,7 +21,16 @@ export const settings = {
   // degree-joystick.js. -2..2, matching the range most keyboards/synths
   // offer for an octave-shift control.
   octaveOffset: 0,
+  controlSurface: 'joysticks',
 };
+
+export const CONTROL_SURFACES = ['joysticks', 'piano'];
+
+// The piano surface only labels Default's modifiers, so it always plays them
+// regardless of the saved set, which is kept for switching back to joysticks.
+export function activeModifierSet() {
+  return settings.controlSurface === 'piano' ? 'default' : settings.modifierSet;
+}
 
 export function init() {
   const keySelectEl = document.getElementById('key-select');

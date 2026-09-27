@@ -1,7 +1,7 @@
 import { stopVoice, noteFreq, reconcileVoices } from './audio.js';
 import { effects } from './effects.js';
 import { chords, getModifierChord, resolvedChordName } from './chords.js';
-import { settings } from './settings.js';
+import { settings, activeModifierSet } from './settings.js';
 import { renderWedgeLabels } from './modifier-joystick.js';
 import { arpeggiator, updateArpChord } from './arpeggiator.js';
 
@@ -267,7 +267,7 @@ function voicesForDegree(d, direction) {
     const bassSemitone = settings.currentKeyRoot + d.semitone - 24 + octaveShift;
     target.set(`${d.key}:bass:${bassSemitone}`, noteFreq(bassSemitone));
   }
-  getModifierChord(settings.modifierSet, d.quality, direction).forEach(interval => {
+  getModifierChord(activeModifierSet(), d.quality, direction).forEach(interval => {
     const semitone = settings.currentKeyRoot + d.semitone + interval + octaveShift;
     target.set(`${d.key}:${semitone}`, noteFreq(semitone));
   });
@@ -292,7 +292,7 @@ function noteFreqFromId(id) {
 function updateChordNameLabel() {
   const [heldKey] = degreeJoystick.heldDegrees.keys();
   const name = heldKey
-    ? resolvedChordName(settings.currentKeyRoot, degreeJoystick.degreeByKey.get(heldKey), degreeJoystick.currentDirection, settings.modifierSet)
+    ? resolvedChordName(settings.currentKeyRoot, degreeJoystick.degreeByKey.get(heldKey), degreeJoystick.currentDirection, activeModifierSet())
     : '';
   // Most names (root + maj7/m7/dim/aug/sus4/...) fit the circle at the
   // default 12px; a handful of rare quality+direction combos (e.g. a
@@ -302,6 +302,15 @@ function updateChordNameLabel() {
     el.textContent = name;
     el.style.fontSize = fontSize;
   });
+  chordChangeListeners.forEach(fn => fn());
+}
+
+const chordChangeListeners = [];
+
+// Fires whenever the held chord's identity changes (press, release, modifier,
+// key, modifier set), so a surface can redraw from this module's state.
+export function onChordChange(fn) {
+  chordChangeListeners.push(fn);
 }
 
 // Routes a chord-change to either the plain voice reconciler or the
@@ -339,7 +348,7 @@ function clearDegreeState(d) {
   d.qualityEl.classList.remove('active');
 }
 
-function pressDegree(d) {
+export function pressDegree(d) {
   if (degreeJoystick.heldDegrees.has(d.key)) return;
   // Monophonic by degree: a new one takes over from whatever was sounding,
   // so keyboard and mouse can't stack chords either. Collect the outgoing

@@ -34,9 +34,10 @@ import { setVocoderEnabled } from './vocoder.js';
 import { init as initSettings, settings, setHoldEnabled, setBassEnabled } from './settings.js';
 import { setWaveType } from './audio.js';
 import { loadSettings, scheduleSave, flushSave } from './persistence.js';
-import { init as initDegreeJoystick, releaseAllHeld, syncArpToHeldChord, setKeyRoot, setModifierSet, setOctave } from './degree-joystick.js';
-import { init as initModifierJoystick, setJoyDirection, renderWedgeLabels } from './modifier-joystick.js';
+import { init as initDegreeJoystick, syncArpToHeldChord, setKeyRoot, setModifierSet, setOctave } from './degree-joystick.js';
+import { init as initModifierJoystick, renderWedgeLabels } from './modifier-joystick.js';
 import { init as initKeyboardView, refreshKeyboardViewLabels } from './keyboard-view.js';
+import { init as initPiano, setControlSurface, releasePiano } from './piano-surface.js';
 import { init as initDebug, debugLog } from './debug.js';
 import { chords } from './chords.js';
 import { init as initFullscreen } from './fullscreen.js';
@@ -55,77 +56,27 @@ initMIDI().catch(() => {}); // MIDI is optional; suppress errors on unsupported 
 // values straight into audio nodes that only exist once that has run.
 loadSettings();
 
-// A plain tap/click flips the effect on/off directly; holding the button
-// down for LONG_PRESS_MS instead opens its <dialog> for editing parameters.
-// This lets the toolbar double as both an at-a-glance on/off panel and an
-// entry point to detail, without a second control per effect.
-const LONG_PRESS_MS = 450;
-
-// Wires an effect's toggle button (tap = on/off, long-press = opens its
-// <dialog>) plus the dialog's parameter sliders. `commitOn: 'change'` is for
-// sliders whose onInput is expensive (regenerating a buffer) — those only
-// fire once a drag settles instead of on every 'input' tick.
-function wireFxDialog({ toggleBtn, dialog, isEnabled, setEnabled, sliders }) {
-  // isEnabled/setEnabled are optional — the envelope dialog has no on/off
-  // concept (always active, not an optional effect), so it skips this whole
-  // block and toggleBtn only ever opens the dialog, with no press-duration
-  // distinction and no active/inactive state to sync.
-  if (isEnabled) {
-    const syncToggleBtn = () => {
-      toggleBtn.classList.toggle('active', isEnabled());
-      toggleBtn.setAttribute('aria-pressed', String(isEnabled()));
-    };
-
-    // Pointer (not click) so we can measure hold duration; a long-press
-    // opens the dialog and suppresses the toggle that would otherwise fire
-    // on release. pointercancel covers the drag-off-button/interruption
-    // case so a stray pointerdown can't leave the timer running.
-    let pressTimer = null;
-    let longPressed = false;
-    toggleBtn.addEventListener('pointerdown', () => {
-      longPressed = false;
-      pressTimer = setTimeout(() => {
-        longPressed = true;
-        dialog.showModal();
-      }, LONG_PRESS_MS);
-    });
-    const cancelPress = () => {
-      clearTimeout(pressTimer);
-      pressTimer = null;
-    };
-    toggleBtn.addEventListener('pointerup', () => {
-      cancelPress();
-      if (longPressed) return;
-      // Every setEnabled here is synchronous except Vocoder's (a mic
-      // permission request) — Promise.resolve(...).then(...) runs the sync
-      // ones' sync/save on the very next microtask (imperceptible) and lets
-      // the async one wait for the real outcome before the button's visual
-      // state and the persisted value catch up, rather than optimistically
-      // showing "on" before permission is actually granted.
-      Promise.resolve(setEnabled(!isEnabled())).then(() => {
-        syncToggleBtn();
+// One settings dialog holds every effect and sound control, out of the way of
+// the playing surface. Each effect is a collapsible section with its own on/off
+// switch; `commitOn: 'change'` is for sliders whose onInput is expensive
+// (regenerating a buffer), so those only fire once a drag settles.
+function wireFxSection({ toggle, isEnabled, setEnabled, sliders }) {
+  if (toggle) {
+    toggle.checked = isEnabled();
+    toggle.addEventListener('change', () => {
+      // Vocoder's setEnabled is async (mic permission) and may fail, so the
+      // switch re-reads the real state once it settles instead of trusting
+      // the click.
+      Promise.resolve(setEnabled(toggle.checked)).then(() => {
+        toggle.checked = isEnabled();
         scheduleSave();
       });
     });
-    toggleBtn.addEventListener('pointercancel', cancelPress);
-    toggleBtn.addEventListener('pointerleave', cancelPress);
-
-    syncToggleBtn();
-  } else {
-    toggleBtn.addEventListener('click', () => dialog.showModal());
   }
-
-  // Native <dialog> has no built-in click-outside-to-close; clicking the
-  // backdrop still targets the dialog element itself (its content box
-  // doesn't cover the backdrop), so this is the standard light-dismiss check.
-  dialog.addEventListener('click', (e) => {
-    if (e.target === dialog) dialog.close();
-  });
 
   // `value` reads the slider's position back out of live state, so state is
   // the single source of truth and the markup's `value` attribute is only a
-  // fallback for a setting that was never saved. Without it a restored
-  // setting would be audible but show the markup default on its slider.
+  // fallback for a setting that was never saved.
   sliders.forEach(({ slider, valueEl, format, value, onInput, commitOn = 'input' }) => {
     slider.value = value();
     valueEl.textContent = format(Number(slider.value));
@@ -138,9 +89,16 @@ function wireFxDialog({ toggleBtn, dialog, isEnabled, setEnabled, sliders }) {
   });
 }
 
-wireFxDialog({
-  toggleBtn: document.getElementById('delay-toggle'),
-  dialog: document.getElementById('delay-dialog'),
+const settingsDialog = document.getElementById('settings-dialog');
+document.getElementById('settings-btn').addEventListener('click', () => settingsDialog.showModal());
+// Native <dialog> has no click-outside-to-close; a backdrop click targets the
+// dialog element itself, since its content box doesn't cover the backdrop.
+settingsDialog.addEventListener('click', (e) => {
+  if (e.target === settingsDialog) settingsDialog.close();
+});
+
+wireFxSection({
+  toggle: document.getElementById('delay-toggle'),
   isEnabled: () => effects.delayEnabled,
   setEnabled: setDelayEnabled,
   sliders: [
@@ -180,9 +138,8 @@ const sliderToCutoff = (t) => FILTER_CUTOFF_MIN * Math.pow(FILTER_CUTOFF_MAX / F
 const cutoffToSlider = (hz) => Math.log(hz / FILTER_CUTOFF_MIN) / Math.log(FILTER_CUTOFF_MAX / FILTER_CUTOFF_MIN);
 const formatHz = (hz) => hz >= 1000 ? `${(hz / 1000).toFixed(1)}kHz` : `${Math.round(hz)}Hz`;
 
-wireFxDialog({
-  toggleBtn: document.getElementById('filter-toggle'),
-  dialog: document.getElementById('filter-dialog'),
+wireFxSection({
+  toggle: document.getElementById('filter-toggle'),
   isEnabled: () => effects.filterEnabled,
   setEnabled: setFilterEnabled,
   sliders: [
@@ -203,9 +160,8 @@ wireFxDialog({
   ],
 });
 
-wireFxDialog({
-  toggleBtn: document.getElementById('tremolo-toggle'),
-  dialog: document.getElementById('tremolo-dialog'),
+wireFxSection({
+  toggle: document.getElementById('tremolo-toggle'),
   isEnabled: () => effects.tremoloEnabled,
   setEnabled: setTremoloEnabled,
   sliders: [
@@ -228,10 +184,9 @@ wireFxDialog({
 
 // Not an audio-node insert like the other three — glide changes how note
 // transitions behave, not a node in the signal graph — but it reuses the
-// same checkbox+slider dialog shape via wireFxDialog for a consistent feel.
-wireFxDialog({
-  toggleBtn: document.getElementById('glide-toggle'),
-  dialog: document.getElementById('glide-dialog'),
+// same switch+slider section shape for a consistent feel.
+wireFxSection({
+  toggle: document.getElementById('glide-toggle'),
   isEnabled: () => audio.glideEnabled,
   setEnabled: setGlideEnabled,
   sliders: [
@@ -248,9 +203,8 @@ wireFxDialog({
 // Also not an effects-node insert (see the Glide comment above) — each
 // voice's own oscillator count/detune/pan, set once at startVoice, not a
 // node in the shared signal graph.
-wireFxDialog({
-  toggleBtn: document.getElementById('unison-toggle'),
-  dialog: document.getElementById('unison-dialog'),
+wireFxSection({
+  toggle: document.getElementById('unison-toggle'),
   isEnabled: () => audio.unisonEnabled,
   setEnabled: setUnisonEnabled,
   sliders: [
@@ -279,11 +233,10 @@ wireFxDialog({
 });
 
 // setEnabled here is async (mic permission) — see the Promise.resolve(...)
-// wrapping in wireFxDialog above, which is what makes an async setEnabled
+// wrapping in wireFxSection above, which is what makes an async setEnabled
 // safe to mix in with every other (synchronous) effect on this same helper.
-wireFxDialog({
-  toggleBtn: document.getElementById('vocoder-toggle'),
-  dialog: document.getElementById('vocoder-dialog'),
+wireFxSection({
+  toggle: document.getElementById('vocoder-toggle'),
   isEnabled: () => effects.vocoderEnabled,
   setEnabled: setVocoderEnabled,
   sliders: [
@@ -297,9 +250,8 @@ wireFxDialog({
   ],
 });
 
-wireFxDialog({
-  toggleBtn: document.getElementById('reverb-toggle'),
-  dialog: document.getElementById('reverb-dialog'),
+wireFxSection({
+  toggle: document.getElementById('reverb-toggle'),
   isEnabled: () => effects.reverbEnabled,
   setEnabled: setReverbEnabled,
   sliders: [
@@ -321,55 +273,30 @@ wireFxDialog({
   ],
 });
 
-// Hold has no adjustable parameter, so it's a direct click-toggle rather
-// than a dialog like the others. Both joysticks read settings.holdEnabled
-// directly in their own event handlers to decide whether a release
-// actually stops the note/modifier; this button just flips that flag and,
-// on the way off, force-releases anything currently latched — the only
-// reset keyboard play has, since it has no "drag to center" gesture of
-// its own.
-const holdToggleBtn = document.getElementById('hold-toggle');
-const syncHoldBtn = () => {
-  holdToggleBtn.classList.toggle('active', settings.holdEnabled);
-  holdToggleBtn.setAttribute('aria-pressed', String(settings.holdEnabled));
-};
-holdToggleBtn.addEventListener('click', () => {
-  const enabled = !settings.holdEnabled;
-  setHoldEnabled(enabled);
-  syncHoldBtn();
-  if (!enabled) {
-    releaseAllHeld();
-    setJoyDirection('center');
-  }
+// Both surfaces read settings.holdEnabled in their own release handlers to
+// decide whether letting go actually stops the chord; turning it off
+// force-releases anything latched, the only reset keyboard play has.
+const holdToggle = document.getElementById('hold-toggle');
+holdToggle.checked = settings.holdEnabled;
+holdToggle.addEventListener('change', () => {
+  setHoldEnabled(holdToggle.checked);
+  if (!holdToggle.checked) releasePiano();
   scheduleSave();
 });
-// Unlike the dialog-backed toggles (which wireFxDialog syncs for us), this
-// one had no initial sync at all — harmless while it always started off, but
-// a restored Hold would have been active with the button still looking idle.
-syncHoldBtn();
 
-// No adjustable parameter, so a direct click-toggle like Hold rather than
-// a dialog. Read by voicesForDegree (degree-joystick.js) on the next chord
-// change — doesn't retroactively add/remove the bass note from whatever is
-// already sounding.
-const bassToggleBtn = document.getElementById('bass-toggle');
-const syncBassBtn = () => {
-  bassToggleBtn.classList.toggle('active', settings.bassEnabled);
-  bassToggleBtn.setAttribute('aria-pressed', String(settings.bassEnabled));
-};
-bassToggleBtn.addEventListener('click', () => {
-  setBassEnabled(!settings.bassEnabled);
-  syncBassBtn();
+// Read by voicesForDegree (degree-joystick.js) on the next chord change —
+// doesn't retroactively add/remove the bass note from whatever is sounding.
+const bassToggle = document.getElementById('bass-toggle');
+bassToggle.checked = settings.bassEnabled;
+bassToggle.addEventListener('change', () => {
+  setBassEnabled(bassToggle.checked);
   scheduleSave();
 });
-syncBassBtn();
 
-// Basic ADSR — always active, so no enabledCheckbox (see wireFxDialog).
+// Basic ADSR — always active, so no on/off switch.
 // Shapes every voice's gain from the moment it starts, not just an
 // optional effect layered on top, so there's nothing to turn off here.
-wireFxDialog({
-  toggleBtn: document.getElementById('envelope-toggle'),
-  dialog: document.getElementById('envelope-dialog'),
+wireFxSection({
   sliders: [
     {
       slider: document.getElementById('envelope-attack-slider'),
@@ -404,10 +331,9 @@ wireFxDialog({
 
 // Arp has an enabled toggle and a rate slider like the other fx dialogs, but
 // also an order <select> (not a slider) — wired directly rather than
-// stretching wireFxDialog's sliders-only shape for one extra control.
-wireFxDialog({
-  toggleBtn: document.getElementById('arp-toggle'),
-  dialog: document.getElementById('arp-dialog'),
+// stretching wireFxSection's sliders-only shape for one extra control.
+wireFxSection({
+  toggle: document.getElementById('arp-toggle'),
   isEnabled: () => arpeggiator.enabled,
   setEnabled: (enabled) => {
     setArpEnabled(enabled);
@@ -449,6 +375,7 @@ initModifierJoystick();
 // state on every keydown/keyup (see its own comment), so its listeners
 // have to be registered, and therefore fire, after theirs.
 initKeyboardView();
+initPiano();
 
 // The key and wave dropdowns: settings.js populates their options and sets
 // the current value, index.js wires what they do — same split as every other
@@ -481,6 +408,20 @@ modifierSetSelectEl.addEventListener('change', () => {
   refreshKeyboardViewLabels();
   scheduleSave();
 });
+
+// The piano only labels Default's modifiers, so the set is fixed while it's
+// the active surface.
+const surfaceSelectEl = document.getElementById('surface-select');
+const syncSurfaceControls = () => {
+  surfaceSelectEl.value = settings.controlSurface;
+  modifierSetSelectEl.disabled = settings.controlSurface === 'piano';
+};
+surfaceSelectEl.addEventListener('change', () => {
+  setControlSurface(surfaceSelectEl.value);
+  syncSurfaceControls();
+  scheduleSave();
+});
+syncSurfaceControls();
 
 // Same split again: the real setOctave lives in degree-joystick.js (it
 // re-voices a held chord).

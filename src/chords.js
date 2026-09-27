@@ -221,3 +221,52 @@ export function getModifierChord(modifierSet, quality, direction) {
   const entry = MODIFIER_CHORD_SETS[modifierSet]?.[direction];
   return entry ? entry.intervals : getChordIntervals(quality, direction);
 }
+
+// Interval (semitones above the chord root) -> the scale-step name a piano key
+// at that distance plays, across the two octaves the piano surface spans.
+export const INTERVAL_NAMES = [
+  'R', 'b2', '2', 'b3', '3', '4', 'b5', '5', '#5', '6', 'b7', '7',
+  'R', 'b9', '9', '#9', '3', '11', '#11', '5', 'b13', '13', 'b7', '7',
+  'R', 'b9',
+];
+
+const DEFAULT_DIRECTIONS = ['up', 'up-right', 'right', 'down-right', 'down', 'down-left', 'left', 'up-left'];
+
+// The piano surface's view of the Default modifier set: for a held triad of
+// `quality`, each direction's `signature` is the notes it sounds that the
+// plain triad doesn't, and `primary` is the one key that selects it on its
+// own. Single-note signatures claim their note first; multi-note ones take
+// their first unclaimed note, or get none (Dom7 on a minor/diminished triad)
+// and are only reachable by holding every note of their signature.
+export function pianoModifiers(quality) {
+  const base = chords.BASE_TRIAD[quality];
+  const mods = DEFAULT_DIRECTIONS.map(dir => ({
+    dir,
+    signature: getChordIntervals(quality, dir).filter(i => !base.includes(i)),
+    primary: null,
+  }));
+  const claimed = new Set();
+  mods.filter(m => m.signature.length === 1).forEach(m => {
+    m.primary = m.signature[0];
+    claimed.add(m.primary);
+  });
+  mods.filter(m => m.signature.length > 1).forEach(m => {
+    const free = m.signature.find(i => !claimed.has(i));
+    if (free === undefined) return;
+    m.primary = free;
+    claimed.add(free);
+  });
+  return mods;
+}
+
+// Which direction a set of held modifier keys (intervals above the root)
+// selects: an exact signature match wins, so holding every note of a chord
+// always gives that chord; otherwise the most recently pressed key's primary.
+export function resolvePianoModifier(quality, heldIntervals, lastInterval) {
+  const mods = pianoModifiers(quality);
+  const held = new Set(heldIntervals);
+  const exact = mods.find(m => m.signature.length === held.size && m.signature.every(i => held.has(i)));
+  if (exact) return exact.dir;
+  const byLast = mods.find(m => m.primary === lastInterval);
+  return byLast ? byLast.dir : 'center';
+}
