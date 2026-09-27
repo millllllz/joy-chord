@@ -23,6 +23,9 @@ export const degreeJoystick = {
   // with Hold on, only a tap (start AND end on center) releases; a drag that
   // merely ends up over center doesn't count.
   touchStartedOnCenter: false,
+  // Octave the held chord was pressed in by the piano surface (whole octaves
+  // from C4); null means the Octave setting decides, as for the joysticks.
+  octaveOverride: null,
 };
 
 export function init() {
@@ -262,7 +265,7 @@ function voicesForDegree(d, direction) {
   // Set before the chord tones (not after) so it sits first in insertion
   // order — ORDERS in arpeggiator.js assumes ascending-pitch id order, and
   // the bass note is always the lowest-pitched voice.
-  const octaveShift = settings.octaveOffset * 12;
+  const octaveShift = (degreeJoystick.octaveOverride ?? settings.octaveOffset) * 12;
   if (settings.bassEnabled) {
     const bassSemitone = settings.currentKeyRoot + d.semitone - 24 + octaveShift;
     target.set(`${d.key}:bass:${bassSemitone}`, noteFreq(bassSemitone));
@@ -348,8 +351,8 @@ function clearDegreeState(d) {
   d.qualityEl.classList.remove('active');
 }
 
-export function pressDegree(d) {
-  if (degreeJoystick.heldDegrees.has(d.key)) return;
+export function pressDegree(d, octave = null) {
+  if (degreeJoystick.heldDegrees.has(d.key) && degreeJoystick.octaveOverride === octave) return;
   // Monophonic by degree: a new one takes over from whatever was sounding,
   // so keyboard and mouse can't stack chords either. Collect the outgoing
   // voices before clearing bookkeeping, so reconcileVoices can glide the
@@ -362,6 +365,7 @@ export function pressDegree(d) {
     clearDegreeState(heldD);
   });
 
+  degreeJoystick.octaveOverride = octave;
   degreeJoystick.heldDegrees.set(d.key, degreeJoystick.currentDirection);
   const target = voicesForDegree(d, degreeJoystick.currentDirection);
   applyVoicing(oldTarget, target);

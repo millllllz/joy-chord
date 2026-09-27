@@ -753,7 +753,8 @@
   body.surface-piano .piano-surface {
     display: flex;
   }
-  body.surface-piano .joysticks {
+  body.surface-piano .joysticks,
+  body.surface-piano #octave-select {
     display: none;
   }
   .piano-readout {
@@ -772,11 +773,116 @@
     letter-spacing: 0.04em;
     color: var(--muted);
   }
-  .piano-keys {
-    position: relative;
+  .piano-body {
     flex: 1 1 auto;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  /* Scrolled by the navigator or a wheel/trackpad, never by dragging keys
+     (touch-action: none), since dragging on keys is playing them. */
+  .piano-keys {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
     touch-action: none;
+  }
+  .piano-keys::-webkit-scrollbar {
+    display: none;
+  }
+  .piano-track {
+    --white-key: clamp(36px, 5.4vw, 56px);
+    position: relative;
+    width: calc(var(--white-count) * var(--white-key));
+    height: 100%;
+  }
+
+  /* Overview of the whole keyboard; the outlined window is the visible
+     range, and pressing or dragging anywhere on it scrolls there. */
+  .piano-nav {
+    position: relative;
+    flex: 0 0 22px;
+    border-radius: 4px;
+    background: var(--piano-white);
+    overflow: hidden;
+    touch-action: none;
+    cursor: pointer;
+  }
+  .piano-nav-key,
+  .piano-nav-label,
+  .piano-nav-root,
+  .piano-nav-window {
+    position: absolute;
+    left: var(--pos);
+    width: var(--size);
+    pointer-events: none;
+  }
+  .piano-nav-key {
+    top: 0;
+    height: 58%;
+    background: var(--piano-black);
+  }
+  .piano-nav-label {
+    bottom: 1px;
+    font-size: 7px;
+    font-weight: 700;
+    color: var(--muted);
+    text-align: center;
+  }
+  .piano-nav-root {
+    bottom: 0;
+    height: 40%;
+    background: var(--accent);
+  }
+  .piano-nav-window {
+    top: 0;
+    bottom: 0;
+    border: 2px solid var(--accent);
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  @media (orientation: portrait) {
+    .piano-body {
+      flex-direction: row;
+    }
+    .piano-track {
+      --white-key: clamp(34px, 5.6vh, 52px);
+      width: 100%;
+      height: calc(var(--white-count) * var(--white-key));
+    }
+    .piano-nav-key,
+    .piano-nav-label,
+    .piano-nav-root,
+    .piano-nav-window {
+      top: auto;
+      bottom: var(--pos);
+      height: var(--size);
+    }
+    .piano-nav-key {
+      left: 0;
+      width: 58%;
+    }
+    .piano-nav-label {
+      left: auto;
+      right: 1px;
+      width: auto;
+      display: flex;
+      align-items: center;
+    }
+    .piano-nav-root {
+      left: auto;
+      right: 0;
+      width: 40%;
+    }
+    .piano-nav-window {
+      left: 0;
+      width: auto;
+      right: 0;
+    }
   }
 
   /* Keys are laid out along one axis by --pos/--size (set per key in JS):
