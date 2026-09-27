@@ -68,6 +68,16 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: var(--text);
     position: relative;
+    /* Baseline for the whole app: no pinch-zoom, and — the actual fix for
+       rapid taps sometimes zooming in — no double-tap-zoom either. Still
+       permits pan-x/pan-y, so the settings dialog and debug panel keep
+       scrolling normally; only a descendant that needs stricter handling
+       (the joysticks, the piano's own drag-to-play/scroll areas) overrides
+       this with touch-action: none. `user-select: none` (set lower down on
+       each interactive panel) stops text getting selected, but it does
+       nothing about the zoom gesture — that's touch-action's job, and nothing
+       here was setting it above these two spots (.piano-keys/.piano-nav). */
+    touch-action: manipulation;
   }
   .synth {
     flex: 1;
@@ -133,6 +143,14 @@
     width: 100%;
     user-select: none;
     -webkit-user-select: none;
+    /* Belt-and-suspenders with the touchstart/touchmove preventDefault() in
+       degree-joystick.js/modifier-joystick.js: those stop a *touch* drag
+       from panning, but CSS touch-action is what actually governs whether
+       the browser's double-tap-zoom gesture recognizer engages here at all —
+       relying on JS preventDefault() alone for that has been flaky on iOS
+       Safari, especially under rapid taps. .keyboard-view picks this up too
+       (shared rule), harmlessly, since it's a non-interactive visualization. */
+    touch-action: none;
   }
   /* Landscape: the same sticks in the same DOM order, laid out left to
      right instead, each taking an equal share of the width. */
